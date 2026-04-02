@@ -1,0 +1,11 @@
+{
+  "name": "kantoori",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Standard Rummy card game engine",
+  "main": "src/game.js",
+  "scripts": {
+    "demo":  "node demo.js",
+    "start": "npx serve . --listen 3000"
+  }
+}
