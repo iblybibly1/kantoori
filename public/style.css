@@ -172,14 +172,11 @@ select option { background: #0f1f12; }
 
 /* ── GAME SCREEN ─────────────────────────────────────────────────────────── */
 #game-screen {
-  display: grid;
-  grid-template-rows: auto auto 1fr auto auto auto;
-  /* Fill #app — do NOT re-declare viewport height; #app already owns it */
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  min-height: 0;
   overflow: hidden;
   background: var(--room-bg);
-  /* Subtle room ambience */
   background-image: radial-gradient(ellipse at 50% 50%, #0d2515 0%, #080f09 70%);
 }
 
@@ -265,33 +262,14 @@ select option { background: #0f1f12; }
 .opp-chips { font-size: 11px; color: var(--gold); font-weight: 700; }
 .opp-status { font-size: 9px; color: #e67e22; font-weight: 700; text-transform: uppercase; }
 
-/* Table area */
-.table-area {
+/* Pile row — replaces the poker table */
+.pile-row {
   display: flex; align-items: center; justify-content: center;
-  flex: 1; overflow: hidden; padding: 4px 8px;
-}
-.table-felt {
-  display: flex; align-items: center; justify-content: center; gap: 20px;
-  padding: 16px 22px;
-  background:
-    radial-gradient(ellipse at 50% 40%, var(--felt-hi) 0%, var(--felt) 45%, var(--felt-dark) 100%);
-  border-radius: 44px;
-  border: 9px solid var(--wood);
-  outline: 2px solid rgba(255,255,255,.05);
-  box-shadow:
-    0 20px 60px rgba(0,0,0,.8),
-    0 2px 0 var(--wood-hi) inset,
-    0 -2px 0 rgba(0,0,0,.5) inset,
-    0 0 40px rgba(0,0,0,.3) inset;
-  position: relative;
-}
-/* Felt texture */
-.table-felt::before {
-  content: '';
-  position: absolute; inset: 0; border-radius: 36px; pointer-events: none;
-  background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.04) 3px, rgba(0,0,0,.04) 6px),
-    repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,.04) 3px, rgba(0,0,0,.04) 6px);
+  gap: 28px; padding: 10px 12px;
+  background: rgba(0,0,0,.25);
+  border-top: 1px solid rgba(255,255,255,.05);
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  flex-shrink: 0;
 }
 .pile-col {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -394,12 +372,19 @@ select option { background: #0f1f12; }
 }
 .hand-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
 .hand-hint  { font-size: 10px; color: rgba(241,196,15,.55); }
+.hand-area { position: relative; }
 .hand-cards {
   display: flex; gap: 4px;
-  overflow-x: auto; padding: 6px 2px 4px;
-  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  overflow-x: auto; padding: 6px 2px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.2) transparent;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  width: 100%;
+  box-sizing: border-box;
 }
-.hand-cards::-webkit-scrollbar { display: none; }
+.hand-cards::-webkit-scrollbar { height: 3px; }
+.hand-cards::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 2px; }
 .hand-cards.no-scroll { overflow: hidden; touch-action: none; }
 
 /* Prevent iOS text-selection callout on long-press */

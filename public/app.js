@@ -574,11 +574,10 @@ function renderGame() {
     ? renderCard(gs.topDiscard, { jokerCard:jCard, drawable:canDrawDiscard, onClick:canDrawDiscard?function(){socket.emit('game-action',{type:'draw-discard'});}:null })
     : h('div',{class:'empty-discard'},'Empty');
 
-  var tableFelt = h('div',{class:'table-felt'},[
+  var pileRow = h('div',{class:'pile-row'},[
     h('div',{class:'pile-col'},[h('div',{class:'pile-lbl'},'Deck'),stock]),
     h('div',{class:'pile-col'},[h('div',{class:'pile-lbl'},'Discard'),discard]),
   ]);
-  var tableArea = h('div',{class:'table-area'},[tableFelt]);
 
   // Hand
   var myHand = gs.hands[mySeat] || [];
@@ -611,6 +610,8 @@ function renderGame() {
     var cardNode = renderCard(card, { jokerCard:jCard, selectable:canSel, selected:isSel });
     var slot = h('div',{class:'cslot'});
     slot.appendChild(cardNode);
+    // Prevent browser native drag-and-drop ghost image
+    slot.addEventListener('dragstart', function(e){ e.preventDefault(); });
 
     // Long-press to drag, quick tap to select
     var ts = { timer:null, startX:0, startY:0 };
@@ -665,7 +666,7 @@ function renderGame() {
   return h('div',{id:'game-screen'},[
     header,
     h('div',{class:'opp-strip'},oppNodes),
-    tableArea,
+    pileRow,
     handArea,
     h('div',{class:'action-bar'},buildActions(gs, isMyTurn, mySeat)),
     h('div',{class:'status-bar'},buildStatus(gs, isMyTurn, mySeat)),
