@@ -37,7 +37,11 @@
   --rad: 10px;
 }
 
-html, body {
+html {
+  height: 100%;
+  /* JS sets --vh to window.innerHeight/100 for iOS Safari compat */
+}
+body {
   height: 100%;
   font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
   background: var(--room-bg);
@@ -47,7 +51,9 @@ html, body {
   touch-action: manipulation;
 }
 #app {
-  height: 100vh; height: 100dvh;
+  height: 100vh;
+  height: 100svh;   /* safe = excludes chrome; widest iOS support */
+  height: 100dvh;   /* dynamic; best when supported */
   display: flex; flex-direction: column; overflow: hidden;
 }
 
@@ -85,7 +91,7 @@ select option { background: #0f1f12; }
 
 /* ── Screens (non-game) ──────────────────────────────────────────────────── */
 .screen {
-  height: 100vh; height: 100dvh;
+  height: 100%;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   padding: 20px 16px; overflow-y: auto;
@@ -168,7 +174,9 @@ select option { background: #0f1f12; }
 #game-screen {
   display: grid;
   grid-template-rows: auto auto 1fr auto auto auto;
-  height: 100vh; height: 100dvh;
+  /* Fill #app — do NOT re-declare viewport height; #app already owns it */
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   background: var(--room-bg);
   /* Subtle room ambience */
@@ -398,6 +406,13 @@ select option { background: #0f1f12; }
 .hand-cards::-webkit-scrollbar { display: none; }
 .hand-cards.no-scroll { overflow: hidden; touch-action: none; }
 
+/* Prevent iOS text-selection callout on long-press */
+.cslot, .card, .stock-pile, .hand-cards, .opp-circle {
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
 .cslot { flex-shrink: 0; position: relative; transition: opacity .1s; }
 .cslot.drag-over::before {
   content:''; position:absolute; left:-3px; top:0;
@@ -427,7 +442,7 @@ select option { background: #0f1f12; }
 
 /* ── Result screen ───────────────────────────────────────────────────────── */
 .result-screen {
-  height: 100vh; height: 100dvh;
+  height: 100%;
   overflow-y: auto; padding: 16px 14px;
   display: flex; flex-direction: column; align-items: center; gap: 14px;
   background: radial-gradient(ellipse at 50% 20%, #1e5035 0%, #080f09 100%);
@@ -488,7 +503,7 @@ select option { background: #0f1f12; }
 
 /* ── Session end ─────────────────────────────────────────────────────────── */
 .end-screen {
-  height:100vh; height:100dvh; overflow-y:auto;
+  height:100%; overflow-y:auto;
   padding:20px 14px;
   display:flex; flex-direction:column; align-items:center; gap:18px;
   background:radial-gradient(ellipse at 50% 30%, #1e5035 0%, #080f09 100%);

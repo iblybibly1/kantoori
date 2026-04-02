@@ -2,12 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Kantoori</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Inline fallback: set #app height via JS --vh variable for old iOS */
+    #app { height: calc(var(--vh, 1vh) * 100); }
+  </style>
 </head>
 <body>
   <div id="app"></div>
+  <script>
+    // Fix iOS Safari 100vh bug — run before any JS
+    function fixVH() {
+      document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+    }
+    fixVH();
+    window.addEventListener('resize', fixVH);
+  </script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js"></script>
 </body>

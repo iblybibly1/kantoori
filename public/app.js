@@ -134,14 +134,32 @@ function h(tag, attrs, children) {
 function render() {
   var app = document.getElementById('app');
   app.innerHTML = '';
-  switch (state.screen) {
-    case 'home':        app.appendChild(renderHome());       break;
-    case 'setup':       app.appendChild(renderSetup());      break;
-    case 'lobby':       app.appendChild(renderLobby());      break;
-    case 'game':        app.appendChild(renderGame());       break;
-    case 'result':      app.appendChild(renderResult());     break;
-    case 'session-end': app.appendChild(renderSessionEnd()); break;
-    default: app.textContent = '?';
+  try {
+    switch (state.screen) {
+      case 'home':        app.appendChild(renderHome());       break;
+      case 'setup':       app.appendChild(renderSetup());      break;
+      case 'lobby':       app.appendChild(renderLobby());      break;
+      case 'game':        app.appendChild(renderGame());       break;
+      case 'result':      app.appendChild(renderResult());     break;
+      case 'session-end': app.appendChild(renderSessionEnd()); break;
+      default: app.textContent = '?';
+    }
+  } catch(err) {
+    console.error('Render error:', err);
+    var errDiv = document.createElement('div');
+    errDiv.style.cssText = 'position:fixed;inset:0;background:#0d1f0f;display:flex;flex-direction:column;' +
+      'align-items:center;justify-content:center;padding:24px;gap:16px;';
+    var msg = document.createElement('div');
+    msg.style.cssText = 'color:#ff6b6b;font-family:monospace;font-size:13px;white-space:pre-wrap;' +
+      'max-width:90%;background:rgba(255,0,0,.1);padding:16px;border-radius:8px;border:1px solid rgba(255,0,0,.3);';
+    msg.textContent = 'Error: ' + err.message + '\n\n' + (err.stack || '');
+    var reload = document.createElement('button');
+    reload.textContent = 'Reload';
+    reload.style.cssText = 'padding:12px 28px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;';
+    reload.onclick = function() { location.reload(); };
+    errDiv.appendChild(msg);
+    errDiv.appendChild(reload);
+    app.appendChild(errDiv);
   }
 }
 
@@ -574,21 +592,24 @@ function renderGame() {
     slot.appendChild(cardNode);
 
     // Long-press to drag, quick tap to select
-    var ts = { timer:null, active:false };
+    var ts = { timer:null, startX:0, startY:0 };
     slot.addEventListener('touchstart', function(e) {
-      ts.active = false;
+      // Capture coordinates NOW while event is live — do NOT use e.touches inside setTimeout
+      var cx = e.touches[0].clientX;
+      var cy = e.touches[0].clientY;
+      ts.startX = cx; ts.startY = cy;
+      clearTimeout(ts.timer);
       ts.timer = setTimeout(function(){
-        ts.timer = null; ts.active = true;
+        ts.timer = null;
         if (navigator.vibrate) navigator.vibrate(25);
-        startCardDrag(e.touches, visIdx, slot);
-      }, 180);
-    }, { passive:true });
+        startCardDrag([{clientX: cx, clientY: cy}], visIdx, slot);
+      }, 200);
+    }, { passive:false });
     slot.addEventListener('touchmove', function(e) {
       if (!ts.timer) return;
-      var t = e.touches[0];
-      if (Math.abs(t.clientX-e.target.getBoundingClientRect().left) > 6) {
-        clearTimeout(ts.timer); ts.timer = null;
-      }
+      var dx = Math.abs(e.touches[0].clientX - ts.startX);
+      var dy = Math.abs(e.touches[0].clientY - ts.startY);
+      if (dx > 8 || dy > 8) { clearTimeout(ts.timer); ts.timer = null; }
     }, { passive:true });
     slot.addEventListener('touchend', function() {
       if (ts.timer) { clearTimeout(ts.timer); ts.timer = null; if (canSel) toggleSel(origIdx); }
