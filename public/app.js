@@ -582,8 +582,25 @@ function renderGame() {
 
   // Hand
   var myHand = gs.hands[mySeat] || [];
-  if (!state.handOrder || state.handOrder.length !== myHand.length)
+  if (!state.handOrder) {
     state.handOrder = myHand.map(function(_,i){return i;});
+  } else if (myHand.length === state.handOrder.length + 1) {
+    // Drew a card — append its index (always added at end of server array)
+    state.handOrder.push(myHand.length - 1);
+  } else if (myHand.length === state.handOrder.length - 1) {
+    // Discarded a card — find which original index is now missing and remove it
+    var sortedOld = state.handOrder.slice().sort(function(a,b){return a-b;});
+    var removedIdx = sortedOld.length; // fallback: last
+    for (var ki = 0; ki < sortedOld.length; ki++) {
+      if (sortedOld[ki] !== ki) { removedIdx = ki; break; }
+    }
+    state.handOrder = state.handOrder
+      .filter(function(x){ return x !== removedIdx; })
+      .map(function(x){ return x > removedIdx ? x - 1 : x; });
+  } else if (myHand.length !== state.handOrder.length) {
+    // Round start or unexpected change — full reset
+    state.handOrder = myHand.map(function(_,i){return i;});
+  }
 
   var handContainer = h('div',{class:'hand-cards'});
   state.handOrder.forEach(function(origIdx, visIdx) {
@@ -618,7 +635,8 @@ function renderGame() {
     slot.addEventListener('touchend', function() {
       if (ts.timer) { clearTimeout(ts.timer); ts.timer = null; if (canSel) toggleSel(origIdx); }
     });
-    slot.addEventListener('mousedown', function(e) {
+    slot.addEventListener('pointerdown', function(e) {
+      if (e.pointerType !== 'mouse') return; // touch handled by touchstart above
       e.preventDefault();
       startCardDrag([{clientX: e.clientX, clientY: e.clientY}], visIdx, slot);
     });
