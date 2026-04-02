@@ -22,6 +22,8 @@ var drag = null;
 function cleanupDrag() {
   document.removeEventListener('touchmove', onDragMove, false);
   document.removeEventListener('touchend',  onDragEnd,  false);
+  document.removeEventListener('mousemove', onDragMove, false);
+  document.removeEventListener('mouseup',   onDragEnd,  false);
 }
 
 function startCardDrag(touches, visualIdx, slotEl) {
@@ -53,12 +55,14 @@ function startCardDrag(touches, visualIdx, slotEl) {
 
   document.addEventListener('touchmove', onDragMove, { passive: false });
   document.addEventListener('touchend',  onDragEnd,  false);
+  document.addEventListener('mousemove', onDragMove, false);
+  document.addEventListener('mouseup',   onDragEnd,  false);
 }
 
 function onDragMove(e) {
   if (!drag) return;
   if (e.cancelable) e.preventDefault();
-  var pt = e.touches[0];
+  var pt = e.touches ? e.touches[0] : e;
 
   drag.clone.style.left = (pt.clientX - drag.offX) + 'px';
   drag.clone.style.top  = (pt.clientY - drag.offY) + 'px';
@@ -562,7 +566,7 @@ function renderGame() {
   var canDrawDiscard = isMyTurn && gs.phase === 'draw' && !!gs.topDiscard;
   var stock = h('div',{class:'stock-pile'+(canDrawStock?'':' nodraw')},[
     h('span',{class:'sc-num'},String(gs.stockSize)),
-    h('span',{class:'sc-lbl'},'STOCK'),
+    h('span',{class:'sc-lbl'},'DECK'),
   ]);
   if (canDrawStock) stock.addEventListener('click',function(){socket.emit('game-action',{type:'draw-stock'});});
 
@@ -571,7 +575,7 @@ function renderGame() {
     : h('div',{class:'empty-discard'},'Empty');
 
   var tableFelt = h('div',{class:'table-felt'},[
-    h('div',{class:'pile-col'},[h('div',{class:'pile-lbl'},'Stock'),stock]),
+    h('div',{class:'pile-col'},[h('div',{class:'pile-lbl'},'Deck'),stock]),
     h('div',{class:'pile-col'},[h('div',{class:'pile-lbl'},'Discard'),discard]),
   ]);
   var tableArea = h('div',{class:'table-area'},[tableFelt]);
@@ -613,6 +617,10 @@ function renderGame() {
     }, { passive:true });
     slot.addEventListener('touchend', function() {
       if (ts.timer) { clearTimeout(ts.timer); ts.timer = null; if (canSel) toggleSel(origIdx); }
+    });
+    slot.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      startCardDrag([{clientX: e.clientX, clientY: e.clientY}], visIdx, slot);
     });
     if (canSel) slot.addEventListener('click', function() { toggleSel(origIdx); });
 
@@ -661,7 +669,7 @@ function buildActions(gs, isMyTurn, mySeat) {
     return nodes;
   }
   if (gs.phase === 'draw') {
-    var sb = h('button',{class:'btn-b'},'Draw Stock');
+    var sb = h('button',{class:'btn-b'},'Draw Deck');
     sb.addEventListener('click',function(){socket.emit('game-action',{type:'draw-stock'});});
     nodes.push(sb);
     if (gs.topDiscard) {

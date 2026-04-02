@@ -269,7 +269,6 @@ select option { background: #0f1f12; }
 .table-area {
   display: flex; align-items: center; justify-content: center;
   flex: 1; overflow: hidden; padding: 4px 8px;
-  perspective: 700px;
 }
 .table-felt {
   display: flex; align-items: center; justify-content: center; gap: 20px;
@@ -284,9 +283,6 @@ select option { background: #0f1f12; }
     0 2px 0 var(--wood-hi) inset,
     0 -2px 0 rgba(0,0,0,.5) inset,
     0 0 40px rgba(0,0,0,.3) inset;
-  transform: rotateX(7deg);
-  transform-origin: 50% 60%;
-  transform-style: preserve-3d;
   position: relative;
 }
 /* Felt texture */
