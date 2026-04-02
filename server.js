@@ -175,8 +175,11 @@ io.on('connection', (socket) => {
   socket.on('set-chips', ({ playerId, amount }) => {
     const room = getPlayerRoom(socket);
     if (!room) return socket.emit('error', { msg: 'Not in a room' });
-    if (socket.id !== room.hostId) return socket.emit('error', { msg: 'Only host can set chips' });
-    if (room.phase !== 'lobby') return socket.emit('error', { msg: 'Can only set chips in lobby' });
+    const isHost = socket.id === room.hostId;
+    const isBank = socket.id === room.bankId;
+    if (!isHost && !isBank) return socket.emit('error', { msg: 'Only host or bank can set chips' });
+    if (room.phase !== 'lobby' && room.phase !== 'between-rounds')
+      return socket.emit('error', { msg: 'Can only set chips in lobby or between rounds' });
     const target = room.players.find(p => p.id === playerId);
     if (!target) return socket.emit('error', { msg: 'Player not found' });
     const amt = Number(amount);
@@ -304,6 +307,21 @@ io.on('connection', (socket) => {
     room.phase = 'ended';
     io.to(room.code).emit('session-ended', { players: room.players });
     rooms.delete(room.code);
+  });
+
+  // ── chat-message ─────────────────────────────────────────────────────────────
+  socket.on('chat-message', ({ text }) => {
+    const room = getPlayerRoom(socket);
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+    const clean = String(text || '').trim().slice(0, 200);
+    if (!clean) return;
+    io.to(room.code).emit('chat-msg', {
+      nickname: player.nickname,
+      color:    player.color,
+      text:     clean,
+    });
   });
 
   // ── disconnect ────────────────────────────────────────────────────────────────
