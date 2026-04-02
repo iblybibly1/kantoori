@@ -114,9 +114,19 @@ function h(tag, attrs, children) {
     else if (k === 'html')  node.innerHTML = attrs[k];
     else                    node.setAttribute(k, attrs[k]);
   });
-  if (children) {
-    if (typeof children === 'string') node.textContent = children;
-    else children.forEach(function(c) { if (c) node.appendChild(c); });
+  if (children != null) {
+    if (typeof children === 'string' || typeof children === 'number') {
+      node.textContent = String(children);
+    } else {
+      // array — items can be strings, numbers, nodes, or null/undefined
+      children.forEach(function(c) {
+        if (c == null) return;
+        if (typeof c === 'string' || typeof c === 'number')
+          node.appendChild(document.createTextNode(String(c)));
+        else
+          node.appendChild(c);
+      });
+    }
   }
   return node;
 }
@@ -289,7 +299,7 @@ function renderChatMessages() {
     msgs.appendChild(h('div',{
       style:'display:flex;flex-direction:column;gap:2px;',
     },[
-      h('span',{style:'font-size:11px;font-weight:700;color:'+hex},[m.nickname]),
+      h('span',{style:'font-size:11px;font-weight:700;color:'+hex},m.nickname),
       h('div',{
         style:'background:rgba(255,255,255,.08);padding:8px 12px;border-radius:8px;' +
               'font-size:14px;line-height:1.45;max-width:90%;',
@@ -520,7 +530,7 @@ function renderGame() {
 
     var hand = gs.hands[seat] || [];
     return h('div',{class:'opp-avatar'},[
-      h('div',{class:cirClass,style:'background:'+hex},[initial]),
+      h('div',{class:cirClass,style:'background:'+hex},initial),
       roleBadges.length ? h('div',{class:'opp-roles'},roleBadges) : null,
       h('div',{class:'opp-name'},p.nickname),
       h('div',{class:'opp-chips'},'◉ '+p.chips),
