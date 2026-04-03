@@ -12,8 +12,8 @@
 //          card in a run.
 //
 // Win conditions
-//  Win 1 — run(4) + meld(3) + meld(3) = 10 cards  →  discard 1 card to declare
-//  Win 2 — set(3) + set(3) + set(3)   =  9 cards  →  discard 2 cards to declare
+//  Win 1 — run(4) + meld(3) + meld(3) + meld(3) = 13 cards  →  discard 1 card to declare
+//  Win 2 — meld(3) + meld(3) + meld(3) + meld(3) = 12 cards →  discard 2 cards to declare
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Set validation ────────────────────────────────────────────────────────────
@@ -72,47 +72,59 @@ function isMeld(cards, jokerCard = null) {
 
 // ── Winning-hand search ───────────────────────────────────────────────────────
 
-// Win 1: partition 10 cards into run(4) + meld(3) + meld(3).
-// Returns the partition [[g4], [g3a], [g3b]] or null.
+// Win 1: partition 13 cards into run(4) + meld(3) + meld(3) + meld(3).
+// Returns the partition [[g4], [g3a], [g3b], [g3c]] or null.
 function findWin1(hand, jokerCard = null) {
-  if (hand.length !== 10) return null;
+  if (hand.length !== 13) return null;
   const idx = hand.map((_, i) => i);
 
   for (const c4 of _combos(idx, 4)) {
     const g4 = c4.map(i => hand[i]);
     if (!isRun(g4, jokerCard)) continue;
 
-    const rest = idx.filter(i => !c4.includes(i)); // 6 remaining
-    for (const c3 of _combos(rest, 3)) {
-      const g3a = c3.map(i => hand[i]);
-      const rem = rest.filter(i => !c3.includes(i)); // 3 remaining
-      const g3b = rem.map(i => hand[i]);
-      if (isMeld(g3a, jokerCard) && isMeld(g3b, jokerCard)) {
-        return [g4, g3a, g3b];
+    const rest = idx.filter(i => !c4.includes(i)); // 9 remaining
+    for (const c3a of _combos(rest, 3)) {
+      const g3a = c3a.map(i => hand[i]);
+      if (!isMeld(g3a, jokerCard)) continue;
+
+      const rest2 = rest.filter(i => !c3a.includes(i)); // 6 remaining
+      for (const c3b of _combos(rest2, 3)) {
+        const g3b = c3b.map(i => hand[i]);
+        if (!isMeld(g3b, jokerCard)) continue;
+
+        const rem = rest2.filter(i => !c3b.includes(i)); // 3 remaining
+        const g3c = rem.map(i => hand[i]);
+        if (isMeld(g3c, jokerCard)) return [g4, g3a, g3b, g3c];
       }
     }
   }
   return null;
 }
 
-// Win 2: partition 9 cards into set(3) + set(3) + set(3).
-// Returns the partition [[g3a], [g3b], [g3c]] or null.
+// Win 2: partition 12 cards into meld(3) + meld(3) + meld(3) + meld(3).
+// Returns the partition [[g3a], [g3b], [g3c], [g3d]] or null.
 function findWin2(hand, jokerCard = null) {
-  if (hand.length !== 9) return null;
+  if (hand.length !== 12) return null;
   const idx = hand.map((_, i) => i);
 
   for (const c3a of _combos(idx, 3)) {
     const g3a = c3a.map(i => hand[i]);
-    if (!isSet(g3a)) continue;
+    if (!isMeld(g3a, jokerCard)) continue;
 
-    const rest = idx.filter(i => !c3a.includes(i)); // 6 remaining
+    const rest = idx.filter(i => !c3a.includes(i)); // 9 remaining
     for (const c3b of _combos(rest, 3)) {
       const g3b = c3b.map(i => hand[i]);
-      if (!isSet(g3b)) continue;
+      if (!isMeld(g3b, jokerCard)) continue;
 
-      const rem = rest.filter(i => !c3b.includes(i)); // 3 remaining
-      const g3c = rem.map(i => hand[i]);
-      if (isSet(g3c)) return [g3a, g3b, g3c];
+      const rest2 = rest.filter(i => !c3b.includes(i)); // 6 remaining
+      for (const c3c of _combos(rest2, 3)) {
+        const g3c = c3c.map(i => hand[i]);
+        if (!isMeld(g3c, jokerCard)) continue;
+
+        const rem = rest2.filter(i => !c3c.includes(i)); // 3 remaining
+        const g3d = rem.map(i => hand[i]);
+        if (isMeld(g3d, jokerCard)) return [g3a, g3b, g3c, g3d];
+      }
     }
   }
   return null;
@@ -122,14 +134,12 @@ function findWin2(hand, jokerCard = null) {
 
 // ── Meld progress (for scoring) ───────────────────────────────────────────────
 
-// Returns the highest Win-1 progress level achievable from a 10-card hand:
-//   0 — no valid sequence of 4 found (loser pays full penalty)
+// Returns the highest Win-1 progress level achievable from a 13-card hand:
+//   0 — no valid sequence of 4 found
 //   1 — has a sequence of 4, no melds of 3
 //   2 — has a sequence of 4 + one meld of 3
-//   3 — has a sequence of 4 + two melds of 3 (Win 1 eligible but didn't declare)
-//
-// Win 2 (three sets, no sequence) is treated as progress 0 because the sequence
-// is required to reduce the penalty.
+//   3 — has a sequence of 4 + two melds of 3
+//   4 — has a sequence of 4 + three melds of 3 (complete — Win 1 eligible)
 function assessMeldProgress(hand, jokerCard = null) {
   let best = 0;
   const idx = hand.map((_, i) => i);
@@ -145,9 +155,16 @@ function assessMeldProgress(hand, jokerCard = null) {
       if (!isMeld(g3a, jokerCard)) continue;
       if (best < 2) best = 2;
 
-      const rem = rest.filter(i => !c3a.includes(i));
-      for (const c3b of _combos(rem, 3)) {
-        if (isMeld(c3b.map(i => hand[i]), jokerCard)) return 3; // best possible
+      const rest2 = rest.filter(i => !c3a.includes(i));
+      for (const c3b of _combos(rest2, 3)) {
+        const g3b = c3b.map(i => hand[i]);
+        if (!isMeld(g3b, jokerCard)) continue;
+        if (best < 3) best = 3;
+
+        const rem = rest2.filter(i => !c3b.includes(i));
+        for (const c3c of _combos(rem, 3)) {
+          if (isMeld(c3c.map(i => hand[i]), jokerCard)) return 4; // best possible
+        }
       }
     }
   }

@@ -32,8 +32,8 @@
 //    marks them forfeited.  A forfeited player's win attempt triggers forfeit scoring.
 //
 //  Winning — DIK! declaration (player calls declare() on their DISCARD phase turn):
-//    Win 1  Discard 1 card → remaining 10 cards must form run(4)+meld(3)+meld(3)
-//    Win 2  Discard 2 cards → remaining 9 cards must form set(3)+set(3)+set(3)
+//    Win 1  Discard 1 card → remaining 13 cards must form run(4)+meld(3)+meld(3)+meld(3)
+//    Win 2  Discard 2 cards → remaining 12 cards must form meld(3)+meld(3)+meld(3)+meld(3)
 //
 //    If the hand is VALID:  round ends, player wins.
 //    If the hand is INVALID: round ends, player pays every other player
@@ -46,7 +46,7 @@
 import { Deck } from './deck.js';
 import { findWin1, findWin2 } from './melds.js';
 
-const HAND_SIZE = 10;
+const HAND_SIZE = 13;
 
 const Phase = {
   DRAW:    'draw',

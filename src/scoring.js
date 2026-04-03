@@ -34,16 +34,17 @@
 //   All credits ×2 when isDoubleGame() is true (round card is A♠/J♠/7♠/2♠).
 //
 // Meld progress levels (for meld penalty / meld value):
-//   0 — no sequence       → penalty 10  /  value 0
-//   1 — sequence only     → penalty  6  /  value 4
-//   2 — seq + 1 meld      → penalty  3  /  value 7
+//   0 — no sequence       → penalty 10  /  value  0
+//   1 — sequence only     → penalty  6  /  value  4
+//   2 — seq + 1 meld      → penalty  3  /  value  7
 //   3 — seq + 2 melds     → penalty  1  /  value 10
+//   4 — seq + 3 melds     → penalty  0  /  value 13  (complete hand)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { assessMeldProgress } from './melds.js';
 
-const MELD_PENALTY = Object.freeze({ 0: 10, 1: 6, 2: 3, 3: 1 });
-const MELD_VALUE   = Object.freeze({ 0:  0, 1: 4, 2: 7, 3: 10 }); // used for invalid-win
+const MELD_PENALTY = Object.freeze({ 0: 10, 1: 6, 2: 3, 3: 1, 4: 0 });
+const MELD_VALUE   = Object.freeze({ 0:  0, 1: 4, 2: 7, 3: 10, 4: 13 }); // used for invalid-win
 
 // ── Double-game check ──────────────────────────────────────────────────────────
 // All special-card credits are doubled for the round when the Silver card
