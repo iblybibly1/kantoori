@@ -59,6 +59,7 @@ class Game {
     if (playerCount < 2 || playerCount > 6) throw new Error('2–6 players only');
     this.playerCount = playerCount;
     this.scores = Array(playerCount).fill(0);
+    this.startingPlayer = 0;
     this._startRound();
   }
 
@@ -74,7 +75,7 @@ class Game {
     this.stockPile   = [...deck.cards];
     deck.cards       = [];
 
-    this.currentPlayer   = 0;
+    this.currentPlayer   = this.startingPlayer;
     this.phase           = Phase.DRAW;
     this.winner          = null;
     this.forfeiter       = null;      // set on missed thank-you win attempt
@@ -276,6 +277,8 @@ class Game {
 
   newRound() {
     if (this.phase !== Phase.ENDED) throw new Error('Round is still in progress');
+    // Rotate starting player anticlockwise each round
+    this.startingPlayer = (this.startingPlayer - 1 + this.playerCount) % this.playerCount;
     this._startRound();
   }
 
