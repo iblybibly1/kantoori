@@ -177,12 +177,6 @@ function initSocket() {
     state.mySeat   = data.mySeat;
     state.selectedCards = [];
 
-    if (data.myState) {
-      var hand = data.myState.hands[data.mySeat] || [];
-      if (!state.handOrder || state.handOrder.length !== hand.length)
-        state.handOrder = hand.map(function(_, i) { return i; });
-    }
-
     var phase = data.roomInfo.phase;
     if (phase === 'lobby')              state.screen = 'lobby';
     else if (phase === 'playing')       state.screen = 'game';
@@ -609,6 +603,7 @@ function renderGame() {
 
     var cardNode = renderCard(card, { jokerCard:jCard, selectable:canSel, selected:isSel });
     var slot = h('div',{class:'cslot'});
+    slot.style.zIndex = isSel ? '50' : String(visIdx + 1);
     slot.appendChild(cardNode);
     // Prevent browser native drag-and-drop ghost image
     slot.addEventListener('dragstart', function(e){ e.preventDefault(); });
@@ -878,3 +873,8 @@ function renderSessionEnd() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 initSocket();
 render();
+
+// Re-render after orientation change so layout recalculates with new --vh
+window.addEventListener('orientationchange', function() {
+  setTimeout(render, 500);
+});

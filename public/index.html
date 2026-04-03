@@ -22,6 +22,12 @@
     }
     fixVH();
     window.addEventListener('resize', fixVH);
+    // iOS orientation change: fire multiple times as browser takes time to settle
+    window.addEventListener('orientationchange', function() {
+      setTimeout(fixVH, 100);
+      setTimeout(fixVH, 400);
+      setTimeout(fixVH, 800);
+    });
   </script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js"></script>

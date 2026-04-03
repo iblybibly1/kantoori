@@ -61,8 +61,8 @@ body {
 button {
   cursor: pointer; border: none;
   border-radius: var(--rad);
-  padding: 11px 18px; min-height: 44px;
-  font-size: 14px; font-weight: 700; letter-spacing: .3px;
+  padding: 8px 14px; min-height: 36px;
+  font-size: 13px; font-weight: 700; letter-spacing: .3px;
   color: #fff;
   transition: filter .12s, transform .1s;
   -webkit-tap-highlight-color: transparent;
@@ -93,10 +93,14 @@ select option { background: #0f1f12; }
 .screen {
   height: 100%;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 20px 16px; overflow-y: auto;
+  align-items: center;
+  /* flex-start + auto spacers = centered when fits, scrollable when overflows */
+  justify-content: flex-start;
+  padding: 16px 16px 24px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
   background: radial-gradient(ellipse at 50% 40%, #1a5c35 0%, #0a1e0d 100%);
 }
+.screen::before, .screen::after { content: ''; flex: 1; min-height: 0; max-height: 48px; }
 
 .panel {
   background: rgba(0,0,0,.52);
@@ -182,8 +186,8 @@ select option { background: #0f1f12; }
 
 /* Header */
 .ghdr {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 12px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
   background: rgba(0,0,0,.65);
   border-bottom: 1px solid rgba(255,255,255,.06);
   flex-shrink: 0;
@@ -217,21 +221,21 @@ select option { background: #0f1f12; }
 /* Opponents strip */
 .opp-strip {
   display: flex; justify-content: center; align-items: flex-start;
-  gap: 10px; padding: 8px 10px 6px;
+  gap: 8px; padding: 5px 10px 4px;
   overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
 }
 .opp-strip::-webkit-scrollbar { display: none; }
 
 .opp-avatar {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  min-width: 58px; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 48px; flex-shrink: 0;
 }
 .opp-circle {
-  width: 46px; height: 46px; border-radius: 50%;
+  width: 38px; height: 38px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 900; color: #fff;
-  border: 3px solid transparent;
-  box-shadow: 0 4px 12px rgba(0,0,0,.55);
+  font-size: 13px; font-weight: 900; color: #fff;
+  border: 2px solid transparent;
+  box-shadow: 0 3px 8px rgba(0,0,0,.55);
   transition: border-color .2s, box-shadow .25s;
   position: relative;
   flex-shrink: 0;
@@ -262,10 +266,12 @@ select option { background: #0f1f12; }
 .opp-chips { font-size: 11px; color: var(--gold); font-weight: 700; }
 .opp-status { font-size: 9px; color: #e67e22; font-weight: 700; text-transform: uppercase; }
 
-/* Pile row — replaces the poker table */
+/* Pile row */
 .pile-row {
   display: flex; align-items: center; justify-content: center;
-  gap: 28px; padding: 10px 12px;
+  gap: 28px; padding: 8px 12px;
+  /* Slightly smaller cards in the pile row to save space */
+  --cw: 52px; --ch: 72px;
   background: rgba(0,0,0,.25);
   border-top: 1px solid rgba(255,255,255,.05);
   border-bottom: 1px solid rgba(255,255,255,.05);
@@ -374,14 +380,13 @@ select option { background: #0f1f12; }
 .hand-hint  { font-size: 10px; color: rgba(241,196,15,.55); }
 .hand-area { position: relative; }
 .hand-cards {
-  display: flex; gap: 4px;
-  overflow-x: auto; padding: 6px 2px 10px;
+  display: flex; gap: 0;
+  overflow-x: auto; padding: 8px 6px 14px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,.2) transparent;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
-  width: 100%;
-  box-sizing: border-box;
+  width: 100%; box-sizing: border-box;
 }
 .hand-cards::-webkit-scrollbar { height: 3px; }
 .hand-cards::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 2px; }
@@ -394,7 +399,10 @@ select option { background: #0f1f12; }
   user-select: none;
 }
 
-.cslot { flex-shrink: 0; position: relative; transition: opacity .1s; }
+/* Fan/stack cards — each overlaps the previous by 36px */
+.cslot { flex-shrink: 0; position: relative; transition: opacity .1s; margin-left: -36px; }
+.cslot:first-child { margin-left: 0; }
+.cslot:hover { z-index: 20 !important; }
 .cslot.drag-over::before {
   content:''; position:absolute; left:-3px; top:0;
   width:3px; height:100%; background:var(--gold); border-radius:2px; z-index:2;
@@ -406,13 +414,13 @@ select option { background: #0f1f12; }
 
 /* ── Action bar ──────────────────────────────────────────────────────────── */
 .action-bar {
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 10px 7px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px;
   background: rgba(0,0,0,.6);
   border-top: 1px solid rgba(255,255,255,.06);
-  flex-shrink: 0; flex-wrap: wrap; min-height: 56px;
+  flex-shrink: 0; flex-wrap: wrap; min-height: 44px;
 }
-.action-bar button { flex: 1; min-width: 76px; font-size: 13px; padding: 10px 6px; }
+.action-bar button { flex: 1; min-width: 70px; font-size: 12px; padding: 7px 5px; min-height: 32px; }
 .ainfo { color: var(--dim); font-size: 12px; font-style: italic; text-align: center; width: 100%; }
 
 .status-bar {
@@ -547,10 +555,17 @@ select option { background: #0f1f12; }
 
 /* ── Small phones ────────────────────────────────────────────────────────── */
 @media(max-width:360px) {
-  :root { --cw:52px; --ch:74px; }
-  .opp-circle { width:40px; height:40px; font-size:14px; }
-  .action-bar button { font-size:11px; padding:9px 4px; }
+  :root { --cw:52px; --ch:72px; }
+  .opp-circle { width:34px; height:34px; font-size:12px; }
+  .action-bar button { font-size:11px; padding:6px 3px; }
+  .cslot { margin-left: -32px; }
 }
-@media(max-width:420px) {
-  .action-bar button { font-size:12px; }
+@media(max-height:640px) {
+  /* Short screens (landscape or small phones) */
+  .opp-strip { padding: 3px 8px 2px; }
+  .pile-row { padding: 5px 12px; }
+  .hand-area { padding: 4px 8px 6px; }
+  .hand-meta { margin-bottom: 3px; }
+  .action-bar { padding: 3px 8px; min-height: 38px; }
+  .status-bar { padding: 2px 12px; min-height: 18px; font-size: 10px; }
 }
