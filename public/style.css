@@ -572,6 +572,29 @@ select option { background: #0f1f12; }
   .status-bar { padding: 2px 12px; min-height: 18px; font-size: 10px; }
 }
 
+/* ── Landscape mobile (very short screens) ───────────────────────────────── */
+@media (max-height: 480px) {
+  :root { --cw: 44px; --ch: 62px; --cr: 5px; }
+  .ghdr { padding: 2px 8px; }
+  .opp-strip { padding: 2px 8px; }
+  .opp-circle { width: 26px; height: 26px; font-size: 9px; border-width: 1.5px; }
+  .opp-name, .opp-chips, .opp-status, .opp-roles { display: none; }
+  .opp-avatar { gap: 1px; min-width: 30px; }
+  .pile-row { padding: 3px 12px; --cw: 38px; --ch: 54px; }
+  .hand-area { padding: 2px 8px 3px; }
+  .hand-meta { margin-bottom: 2px; }
+  .hand-cards { padding: 4px 4px 8px; }
+  .cslot { margin-left: -28px; }
+  .action-bar {
+    padding: 2px 6px; min-height: 32px; gap: 4px;
+    flex-wrap: nowrap; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .action-bar::-webkit-scrollbar { display: none; }
+  .action-bar button { min-width: 58px; font-size: 11px; padding: 4px 4px; min-height: 28px; flex-shrink: 0; }
+  .status-bar { padding: 1px 8px; min-height: 14px; font-size: 9px; }
+}
+
 /* ── Thankas Notification Banner ─────────────────────────────────────────── */
 .thankas-notif {
   position: fixed;

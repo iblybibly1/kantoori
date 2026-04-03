@@ -41,7 +41,7 @@
 // Double game: Silver card is A♠, 2♠, 7♠ or Q♠ → all credits ×2.
 //
 // Meld progress levels (for meld penalty):
-//   0 — no sequence of 4    → penalty 10
+//   0 — no sequence of 4    → penalty  4
 //   1 — sequence only       → penalty  6
 //   2 — seq + 1 meld        → penalty  3
 //   3 — seq + 2 melds       → penalty  1
@@ -50,7 +50,7 @@
 
 import { assessMeldProgress } from './melds.js';
 
-const MELD_PENALTY = Object.freeze({ 0: 10, 1: 6, 2: 3, 3: 1, 4: 0 });
+const MELD_PENALTY = Object.freeze({ 0: 4, 1: 6, 2: 3, 3: 1, 4: 0 });
 const MELD_VALUE   = Object.freeze({ 0:  0, 1: 4, 2: 7, 3: 10, 4: 13 });
 
 // ── Double-game check ──────────────────────────────────────────────────────────

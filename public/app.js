@@ -671,28 +671,28 @@ function renderGame() {
 
   // Hand
   var myHand = gs.hands[mySeat] || [];
+  // Map card id → server index for O(1) lookups
+  var idToIdx = {};
+  for (var ii = 0; ii < myHand.length; ii++) idToIdx[myHand[ii].id] = ii;
+
   if (!state.handOrder) {
-    state.handOrder = myHand.map(function(_,i){return i;});
-  } else if (myHand.length === state.handOrder.length + 1) {
-    // Drew a card — append its index (always added at end of server array)
-    state.handOrder.push(myHand.length - 1);
-  } else if (myHand.length === state.handOrder.length - 1) {
-    // Discarded a card — find which original index is now missing and remove it
-    var sortedOld = state.handOrder.slice().sort(function(a,b){return a-b;});
-    var removedIdx = sortedOld.length; // fallback: last
-    for (var ki = 0; ki < sortedOld.length; ki++) {
-      if (sortedOld[ki] !== ki) { removedIdx = ki; break; }
+    state.handOrder = myHand.map(function(c) { return c.id; });
+  } else {
+    // Keep IDs still in hand (preserves custom visual order across turns)
+    var newOrder = [];
+    for (var oi = 0; oi < state.handOrder.length; oi++) {
+      if (state.handOrder[oi] in idToIdx) newOrder.push(state.handOrder[oi]);
     }
-    state.handOrder = state.handOrder
-      .filter(function(x){ return x !== removedIdx; })
-      .map(function(x){ return x > removedIdx ? x - 1 : x; });
-  } else if (myHand.length !== state.handOrder.length) {
-    // Round start or unexpected change — full reset
-    state.handOrder = myHand.map(function(_,i){return i;});
+    // Append newly drawn cards not yet tracked
+    for (var ni = 0; ni < myHand.length; ni++) {
+      if (newOrder.indexOf(myHand[ni].id) === -1) newOrder.push(myHand[ni].id);
+    }
+    state.handOrder = newOrder;
   }
 
   var handContainer = h('div',{class:'hand-cards'});
-  state.handOrder.forEach(function(origIdx, visIdx) {
+  state.handOrder.forEach(function(cardId, visIdx) {
+    var origIdx = idToIdx[cardId];
     var card = myHand[origIdx];
     var isSel = state.selectedCards.indexOf(origIdx) !== -1;
     var canSel = isMyTurn && gs.phase === 'discard';
