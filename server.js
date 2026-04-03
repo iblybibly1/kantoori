@@ -319,6 +319,15 @@ io.on('connection', (socket) => {
     if (!room || room.phase !== 'playing') return;
     const player = room.players.find(p => p.id === socket.id);
     if (!player) return;
+
+    // Validate: player must actually have a thankas in their current hand
+    const game = room.game;
+    const hand = game.hands[player.seatIndex];
+    if (!_hasThankas(hand, game.jokerCard)) {
+      socket.emit('lora-mera');
+      return;
+    }
+
     io.to(room.code).emit('thankas-announce', {
       nickname: player.nickname,
       color:    player.color,
@@ -401,6 +410,25 @@ function handleRoundEnd(room) {
 function getPlayerRoom(socket) {
   const code = socket.data.roomCode;
   return code ? rooms.get(code) : null;
+}
+
+// True if the hand contains any thankas group (3+ of a matching type)
+function _hasThankas(hand, jokerCard) {
+  // Silver thankas (3+ Silver cards — same rank+suit as jokerCard, excluding it)
+  if (hand.filter(c => c.isJoker(jokerCard) && c !== jokerCard).length >= 3) return true;
+  // Poker thankas (3+ Poker cards)
+  if (hand.filter(c => c.isSilver(jokerCard)).length >= 3) return true;
+  // Joker wildcard thankas (3+ Joker wildcards)
+  if (hand.filter(c => c.isPoker(jokerCard)).length >= 3) return true;
+  // Normal thankas (3+ same rank + same suit)
+  const grp = new Map();
+  for (const c of hand) {
+    if (c.isJoker(jokerCard) || c.isSilver(jokerCard) || c.isPoker(jokerCard)) continue;
+    const k = c.rank + '|' + c.suit;
+    grp.set(k, (grp.get(k) || 0) + 1);
+    if (grp.get(k) >= 3) return true;
+  }
+  return false;
 }
 
 // ── Start server ──────────────────────────────────────────────────────────────

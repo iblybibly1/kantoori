@@ -199,6 +199,10 @@ function initSocket() {
     showThankasNotif(data.nickname, data.color);
   });
 
+  socket.on('lora-mera', function() {
+    showLoraMera();
+  });
+
   socket.on('chat-msg', function(msg) {
     state.chatMessages.push(msg);
     if (state.chatMessages.length > 100) state.chatMessages.shift();
@@ -236,6 +240,21 @@ function showThankasNotif(nickname, color) {
   document.body.appendChild(notif);
   // Kick off the shrinking bar after paint
   setTimeout(function() { var b=document.getElementById('thankas-bar'); if(b) b.style.width='0'; }, 50);
+  notif._tid = setTimeout(function() { if (notif.parentNode) notif.remove(); }, 10000);
+}
+
+// ── Lora Mera notification (private — only the clicker sees it) ───────────────
+function showLoraMera() {
+  var existing = document.getElementById('lora-mera-notif');
+  if (existing) { clearTimeout(existing._tid); existing.remove(); }
+  var notif = document.createElement('div');
+  notif.id = 'lora-mera-notif';
+  notif.className = 'lora-mera-notif';
+  notif.innerHTML =
+    '<div class="lora-mera-msg">LORA MERA! 🤡</div>' +
+    '<div class="thankas-bar-wrap"><div class="lora-bar" id="lora-bar"></div></div>';
+  document.body.appendChild(notif);
+  setTimeout(function() { var b=document.getElementById('lora-bar'); if(b) b.style.width='0'; }, 50);
   notif._tid = setTimeout(function() { if (notif.parentNode) notif.remove(); }, 10000);
 }
 

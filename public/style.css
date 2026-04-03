@@ -626,6 +626,31 @@ select option { background: #0f1f12; }
   transition: width 10s linear;
 }
 
+/* ── Lora Mera Banner (private shame notification) ───────────────────────── */
+.lora-mera-notif {
+  position: fixed;
+  top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 3000;
+  background: linear-gradient(135deg, #3a0a0a, #1f0505);
+  border: 1.5px solid #e74c3c;
+  border-radius: 12px;
+  padding: 12px 18px 8px;
+  min-width: 200px; max-width: 88vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,.7), 0 0 20px rgba(231,76,60,.3);
+  text-align: center;
+  animation: thankas-drop .25s ease-out;
+}
+.lora-mera-msg {
+  font-size: 16px; font-weight: 900; letter-spacing: 1px;
+  color: #ff6b6b;
+  margin-bottom: 8px;
+}
+.lora-bar {
+  height: 100%; width: 100%; background: #e74c3c;
+  border-radius: 2px;
+  transition: width 10s linear;
+}
+
 /* ── Rulebook Modal ───────────────────────────────────────────────────────── */
 .rules-overlay {
   position: fixed; inset: 0; z-index: 2000;
