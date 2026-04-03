@@ -335,9 +335,9 @@ function updateChatBadge() {
 // ── Card rendering ─────────────────────────────────────────────────────────────
 function getCardType(card, jc) {
   if (card.rank !== jc.rank) return 'normal';
-  if (card.suit === jc.suit) return 'joker';
+  if (card.suit === jc.suit) return 'silver';   // same suit = Silver (the round card)
   var cc = SUIT_COLOR[card.suit], jcc = SUIT_COLOR[jc.suit];
-  return cc !== jcc ? 'poker' : 'silver';
+  return cc !== jcc ? 'joker' : 'poker';         // diff colour = Joker (wild); same colour = Poker
 }
 
 function renderCard(card, opts) {
@@ -517,7 +517,7 @@ function renderGame() {
 
   var header = h('div',{class:'ghdr'},[
     h('span',{class:'ghdr-code'},room.code),
-    h('div',{class:'joker-pill'},[h('span',{class:'jlabel'},'JOKER'),h('span',{style:jStyle},jSym)]),
+    h('div',{class:'joker-pill'},[h('span',{class:'jlabel'},'SILVER'),h('span',{style:jStyle},jSym)]),
     h('div',{class:'turn-pill '+(isMyTurn?'mine':'theirs')},isMyTurn?'YOUR TURN':curName+'\'s turn'),
     chatBtnWrap,
   ]);

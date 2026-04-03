@@ -130,9 +130,12 @@ io.on('connection', (socket) => {
     // Reconnection: same code + same nickname, already in room
     const existing = room.players.find(p => p.nickname === trimmedNick);
     if (existing) {
-      // Restore session
+      const oldId = existing.id;
       existing.id        = socket.id;
       existing.connected = true;
+      // Keep host/bank roles pointing to the new socket id
+      if (room.hostId === oldId) room.hostId = socket.id;
+      if (room.bankId === oldId) room.bankId = socket.id;
       socket.join(code);
       socket.data.roomCode = code;
       broadcastRoomUpdate(room);
