@@ -203,6 +203,8 @@ select option { background: #0f1f12; }
   font-size: 12px;
 }
 .joker-pill .jlabel { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.joker-pill.dbl-game { border: 1px solid var(--r); box-shadow: 0 0 8px rgba(231,76,60,.35); }
+.dbl-badge { font-size: 10px; font-weight: 900; color: var(--r); margin-left: 3px; animation: tpulse 1.8s ease-in-out infinite; }
 .turn-pill {
   margin-left: auto;
   font-size: 12px; font-weight: 800; letter-spacing: .5px;

@@ -9,6 +9,7 @@ import {
   calcRoundResult,
   calcForfeitResult,
   calcInvalidWinResult,
+  isDoubleGame,
 } from './src/scoring.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -379,6 +380,7 @@ function handleRoundEnd(room) {
   room.phase = 'between-rounds';
 
   const info = roomInfo(room);
+  scoring.isDoubleGame = isDoubleGame(game.jokerCard);
   io.to(room.code).emit('round-ended', { roomInfo: info, scoring, outcome });
 }
 

@@ -27,12 +27,15 @@ function isSet(cards) {
 
 // ── Run validation ────────────────────────────────────────────────────────────
 
-// True if cards form a valid run (poker wildcards accepted).
+// True if cards form a valid run (poker wildcards accepted in runs of 3 ONLY).
+// A run of 4 must use all real cards — no Joker substitution allowed.
 function isRun(cards, jokerCard = null) {
   if (cards.length < 3) return false;
 
-  const pokers   = jokerCard ? cards.filter(c =>  c.isPoker(jokerCard)) : [];
-  const regulars = jokerCard ? cards.filter(c => !c.isPoker(jokerCard)) : [...cards];
+  // Joker wildcards only substitute in 3-card runs; 4-card runs must be pure.
+  const allowWildcards = jokerCard !== null && cards.length === 3;
+  const pokers   = allowWildcards ? cards.filter(c =>  c.isPoker(jokerCard)) : [];
+  const regulars = allowWildcards ? cards.filter(c => !c.isPoker(jokerCard)) : [...cards];
 
   if (regulars.length === 0) return false;
 

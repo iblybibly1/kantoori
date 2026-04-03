@@ -515,9 +515,16 @@ function renderGame() {
   chatBtnWrap.appendChild(chatBtn);
   chatBtnWrap.appendChild(badge);
 
+  var isDouble = jCard && jCard.suit === 'Spades' && ['A','J','7','2'].indexOf(jCard.rank) !== -1;
+  var silverPill = h('div',{class:'joker-pill'+(isDouble?' dbl-game':'')},[
+    h('span',{class:'jlabel'},'SILVER'),
+    h('span',{style:jStyle},jSym),
+    isDouble ? h('span',{class:'dbl-badge'},'×2') : null,
+  ]);
+
   var header = h('div',{class:'ghdr'},[
     h('span',{class:'ghdr-code'},room.code),
-    h('div',{class:'joker-pill'},[h('span',{class:'jlabel'},'SILVER'),h('span',{style:jStyle},jSym)]),
+    silverPill,
     h('div',{class:'turn-pill '+(isMyTurn?'mine':'theirs')},isMyTurn?'YOUR TURN':curName+'\'s turn'),
     chatBtnWrap,
   ]);
@@ -752,6 +759,18 @@ function renderResult() {
   var bannerTxt = outcome==='win'?'🏆 Win!':outcome==='forfeit'?'⚠️ Forfeit!':'❌ Invalid DIK!';
   var children = [h('div',{class:bannerCls},bannerTxt)];
 
+  // Double-game banner
+  var isDouble = data && data.roomInfo && (function() {
+    var jc = state.myState && state.myState.jokerCard;
+    if (!jc && scoring) jc = null; // not available after round-ended, skip
+    return false; // calculated below from scoring.isDoubleGame flag
+  })();
+  if (scoring && scoring.isDoubleGame) {
+    children.push(h('div',{style:'text-align:center;font-size:13px;font-weight:800;color:var(--r);' +
+      'background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:8px;padding:8px 12px;'},
+      '⚠ Double Game — all claims ×2'));
+  }
+
   if (scoring && scoring.netPayments && scoring.netPayments.length) {
     var txRows = scoring.netPayments.map(function(pay){
       var fp = room.players.find(function(p){return p.seatIndex===pay.from;});
@@ -764,6 +783,22 @@ function renderResult() {
       ]);
     });
     children.push(h('div',{class:'res-panel'},[h('div',{class:'sec-title'},'Chip Transfers')].concat(txRows)));
+  }
+
+  // Claims breakdown (special-card credits per player)
+  if (scoring && scoring.credits && scoring.credits.some(function(c){return c>0;})) {
+    var claimRows = room.players.filter(function(p){
+      return scoring.credits[p.seatIndex] > 0;
+    }).map(function(p){
+      return h('div',{class:'tx-row'},[
+        h('div',{class:'pdot',style:'background:'+colorHex(p.color)}),
+        h('span',{style:'flex:1;font-weight:600'},p.nickname),
+        h('span',{class:'tx-amt'},'◉ '+scoring.credits[p.seatIndex]+' claims'),
+      ]);
+    });
+    if (claimRows.length) {
+      children.push(h('div',{class:'res-panel'},[h('div',{class:'sec-title'},'Special Claims')].concat(claimRows)));
+    }
   }
 
   var sorted = room.players.slice().sort(function(a,b){return b.chips-a.chips;});
