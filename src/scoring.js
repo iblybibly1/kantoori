@@ -4,119 +4,122 @@
 // Three outcome types:
 //
 //   calcRoundResult(game)
-//     Normal win.  Losing players pay the winner their meld penalty, everyone
-//     pays everyone else for special cards.  Packed players pay 1 pt to winner.
+//     Normal win.  All players pay everyone their special credits (mutual).
+//     Losers also pay winner their meld penalty.  Packed players pay winner 1pt.
+//     If winner used no Joker wildcards in their winning hand, +2 claims bonus.
 //
 //   calcForfeitResult(game)
-//     Forfeited player declared win while they had a missed thank-you.
-//     Forfeiter pays each other player (their specials + forfeiter's meld penalty).
-//     Forfeiter cannot collect their own specials.
+//     Missed thank-you.  Mutual special credits apply.
+//     Forfeiter additionally pays all other players their meld penalty.
 //
-//   calcInvalidWinResult(game)
-//     Player clicked DIK! but their hand did not meet the win condition.
-//     Claimer pays each other player the point value of that player's completed
-//     melds (sequence=4pts, each meld-of-3=3pts) plus that player's special credits.
-//     Claimer cannot collect their own specials.
+//   calcInvalidWinResult(game)  — "wrong DIK"
+//     Mutual special credits apply.
+//     Claimer additionally pays every other player 4 claims.
 //
-// Special card credits:
+// Special card credits  (all ×2 when isDoubleGame is true)
 //
-//   Frontend name  Backend method  Per card  Thankas (3+)
-//   ─────────────  ──────────────  ────────  ────────────
-//   Silver         isJoker()          3          12
-//   Poker          isSilver()         2           9
-//   Joker (wild)   isPoker()       2→1 pair       6
-//   Ace of Spades  (regular)          2          12
-//   Jack of Spades (regular)          1          12
-//   Other 3-set    (regular)          0           6   (normal thankas)
+//   Frontend name  Backend method  Per card               Thankas (≥3)
+//   ─────────────  ──────────────  ─────────────────────  ─────────────────────
+//   Silver         isJoker()       2 each (round card=0)  7
+//   Poker          isSilver()      1 each                 6 / 5 / 0 (by discard)
+//   Joker (wild)   isPoker()       winner=1, else max(0,n-1) per group  thankas: 10n-1
+//   Ace♠           (regular)       1 each                 (+ normal thankas bonus)
+//   Normal thankas (same rank+suit groups ≥3)             4n-1  (n=number of groups)
 //
-//   The initial Silver (the jokerCard object itself) counts as 0 claims.
-//   Thankas bonus replaces (not adds to) per-card count.
-//   All credits ×2 when isDoubleGame() is true (round card is A♠/J♠/7♠/2♠).
+//   Poker thankas  (≥3 Poker cards):
+//     0 drawn from discard → 6 claims
+//     1 drawn from discard → 5 claims
+//     2+ drawn from discard → 0 claims (still a valid set of 3)
 //
-// Meld progress levels (for meld penalty / meld value):
-//   0 — no sequence       → penalty 10  /  value  0
-//   1 — sequence only     → penalty  6  /  value  4
-//   2 — seq + 1 meld      → penalty  3  /  value  7
-//   3 — seq + 2 melds     → penalty  1  /  value 10
-//   4 — seq + 3 melds     → penalty  0  /  value 13  (complete hand)
+//   Joker non-thankas (count < 3):
+//     winner: count claims   |   non-winner: max(0, count-1) claims
+//   Joker thankas groups (per 3): 10n-1  (1 group=9, 2 groups=19, …)
+//   Plus remaining (1 or 2 jokers) using non-thankas rule above.
+//
+//   Normal thankas formula: n groups → 4n-1 claims  (1→3, 2→7, 3→11)
+//
+// Double game: Silver card is A♠, 2♠, 7♠ or Q♠ → all credits ×2.
+//
+// Meld progress levels (for meld penalty):
+//   0 — no sequence of 4    → penalty 10
+//   1 — sequence only       → penalty  6
+//   2 — seq + 1 meld        → penalty  3
+//   3 — seq + 2 melds       → penalty  1
+//   4 — seq + 3 melds       → penalty  0  (complete hand)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { assessMeldProgress } from './melds.js';
 
 const MELD_PENALTY = Object.freeze({ 0: 10, 1: 6, 2: 3, 3: 1, 4: 0 });
-const MELD_VALUE   = Object.freeze({ 0:  0, 1: 4, 2: 7, 3: 10, 4: 13 }); // used for invalid-win
+const MELD_VALUE   = Object.freeze({ 0:  0, 1: 4, 2: 7, 3: 10, 4: 13 });
 
 // ── Double-game check ──────────────────────────────────────────────────────────
-// All special-card credits are doubled for the round when the Silver card
-// (the jokerCard drawn at round start) is A♠, J♠, 7♠ or 2♠.
 function isDoubleGame(jokerCard) {
-  return jokerCard.suit === 'Spades' && ['A', 'J', '7', '2'].includes(jokerCard.rank);
+  return jokerCard.suit === 'Spades' && ['A', '2', '7', 'Q'].includes(jokerCard.rank);
 }
 
 // ── Special-card credits ───────────────────────────────────────────────────────
+// pokerFromDiscard[p] = how many Poker cards player p drew from the discard pile
+// winnerIndex = seat index of winner, or null for no winner
 
-function calcSpecialCredits(hands, jokerCard) {
+function calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winnerIndex) {
   const n    = hands.length;
   const mult = isDoubleGame(jokerCard) ? 2 : 1;
   const credits = new Array(n).fill(0);
 
   for (let p = 0; p < n; p++) {
-    const hand = hands[p];
+    const hand     = hands[p];
+    const isWinner = (p === winnerIndex);
     let pts = 0;
 
-    // Silver cards (backend: isJoker) ─────────────────────────────────────────
-    // 3 claims each; the jokerCard instance itself = 0 claims; thankas of 3 = 12
-    const silvs = hand.filter(c => c.isJoker(jokerCard));
-    if (silvs.length >= 3) {
-      pts += 12;
-    } else {
-      pts += silvs.filter(c => c !== jokerCard).length * 3;
-    }
+    // ── Silver (backend: isJoker) ─────────────────────────────────────────────
+    // 2 claims each (round card itself = 0); thankas of ≥3 = 7
+    const silvCount = hand.filter(c => c.isJoker(jokerCard) && c !== jokerCard).length;
+    pts += silvCount >= 3 ? 7 : silvCount * 2;
 
-    // Poker cards (backend: isSilver) ─────────────────────────────────────────
-    // 2 claims each; thankas of 3 = 9
+    // ── Poker (backend: isSilver) ─────────────────────────────────────────────
+    // 1 claim each; thankas value depends on how many were drawn from the discard pile
     const poks = hand.filter(c => c.isSilver(jokerCard));
     if (poks.length >= 3) {
-      pts += 9;
+      const fromDisc = (pokerFromDiscard && pokerFromDiscard[p]) || 0;
+      if      (fromDisc === 0) pts += 6;
+      else if (fromDisc === 1) pts += 5;
+      // 2+ from discard → 0 claims (still counts as a valid set)
     } else {
-      pts += poks.length * 2;
+      pts += poks.length;
     }
 
-    // Joker cards (backend: isPoker, wildcard) ────────────────────────────────
-    // 2 Jokers = 1 claim; thankas of 3 = 6
-    const joks = hand.filter(c => c.isPoker(jokerCard));
-    if (joks.length >= 3) {
-      pts += 6;
-    } else {
-      pts += Math.floor(joks.length / 2);
-    }
+    // ── Joker/wildcard (backend: isPoker) ─────────────────────────────────────
+    // Thankas groups (per 3): 10n-1 claims  (9, 19, 29 …)
+    // Remaining (1-2 jokers): winner=count, non-winner=max(0, count-1)
+    const joks       = hand.filter(c => c.isPoker(jokerCard));
+    const jokGroups  = Math.floor(joks.length / 3);
+    const jokRem     = joks.length % 3;
+    if (jokGroups > 0) pts += 10 * jokGroups - 1;
+    pts += isWinner ? jokRem : Math.max(0, jokRem - 1);
 
-    // Regular cards ───────────────────────────────────────────────────────────
-    // Ace♠ = 2 claims each (12 as thankas of 3)
-    // Jack♠ = 1 claim each (12 as thankas of 3)
-    // Any other 3-of-a-kind (same rank + same suit) = 6 claims (normal thankas)
+    // ── Ace of Spades ─────────────────────────────────────────────────────────
+    // 1 claim each (only Aces♠ that are not already Silver/Poker/Joker)
+    pts += hand.filter(c =>
+      c.rank === 'A' && c.suit === 'Spades' &&
+      !c.isJoker(jokerCard) && !c.isSilver(jokerCard) && !c.isPoker(jokerCard)
+    ).length;
+
+    // ── Normal thankas (same rank + same suit groups of ≥3) ───────────────────
+    // n groups → 4n-1 claims  (1→3, 2→7, 3→11)
     const regs = hand.filter(c =>
       !c.isJoker(jokerCard) && !c.isSilver(jokerCard) && !c.isPoker(jokerCard)
     );
-    // Group by rank+suit
     const grp = new Map();
     for (const c of regs) {
       const k = c.rank + '|' + c.suit;
-      const entry = grp.get(k);
-      if (entry) entry.count++;
-      else grp.set(k, { rank: c.rank, suit: c.suit, count: 1 });
+      grp.set(k, (grp.get(k) || 0) + 1);
     }
-    for (const { rank, suit, count } of grp.values()) {
-      const isAceS  = rank === 'A' && suit === 'Spades';
-      const isJackS = rank === 'J' && suit === 'Spades';
-      if (count >= 3) {
-        // Thankas — overrides per-card count
-        pts += (isAceS || isJackS) ? 12 : 6;
-      } else {
-        if (isAceS)  pts += count * 2;
-        if (isJackS) pts += count * 1;
-      }
+    let normalGroups = 0;
+    for (const count of grp.values()) {
+      if (count >= 3) normalGroups++;
     }
+    if (normalGroups > 0) pts += 4 * normalGroups - 1;
 
     credits[p] = pts * mult;
   }
@@ -141,23 +144,21 @@ function _buildSpecialsLedger(playerCount, credits) {
 // ── Normal round result ────────────────────────────────────────────────────────
 
 function calcRoundResult(game) {
-  const { winner, hands, jokerCard, playerCount, packed } = game;
+  const { winner, hands, jokerCard, playerCount, packed, pokerFromDiscard, noWildcardBonus } = game;
 
-  const credits      = calcSpecialCredits(hands, jokerCard);
+  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winner);
+
+  // No-wildcard bonus: winner used no Joker wildcards → +2 extra claims (×2 if double game)
+  if (noWildcardBonus && winner !== null) {
+    credits[winner] += isDoubleGame(jokerCard) ? 4 : 2;
+  }
+
   const meldProgress = hands.map((hand, i) =>
     i === winner ? null : assessMeldProgress(hand, jokerCard)
   );
-  const meldPenalty  = meldProgress.map(p => (p === null ? 0 : MELD_PENALTY[p]));
+  const meldPenalty = meldProgress.map(p => (p === null ? 0 : MELD_PENALTY[p]));
 
-  const ledger = Array.from({ length: playerCount }, () => new Array(playerCount).fill(0));
-
-  // Everyone pays everyone for special cards
-  for (let to = 0; to < playerCount; to++) {
-    if (credits[to] === 0) continue;
-    for (let from = 0; from < playerCount; from++) {
-      if (from !== to) ledger[from][to] += credits[to];
-    }
-  }
+  const ledger = _buildSpecialsLedger(playerCount, credits);
 
   // Each loser pays winner the meld penalty
   for (let loser = 0; loser < playerCount; loser++) {
@@ -171,23 +172,22 @@ function calcRoundResult(game) {
   }
 
   const netPayments = _netLedger(ledger, playerCount);
-  return { winner, credits, meldProgress, meldPenalty, netPayments };
+  return { winner, credits, meldProgress, meldPenalty, netPayments, noWildcardBonus };
 }
 
 // ── Forfeit-win result ────────────────────────────────────────────────────────
-// Special claims: everyone pays everyone (including forfeiter collecting their own).
-// Additionally: forfeiter pays each other player their meld penalty.
+// Mutual special credits apply.  Forfeiter additionally pays meld penalty to all.
 
 function calcForfeitResult(game) {
-  const { forfeiter, hands, jokerCard, playerCount } = game;
+  const { forfeiter, hands, jokerCard, playerCount, pokerFromDiscard } = game;
 
-  const credits       = calcSpecialCredits(hands, jokerCard);
+  // No winner in a forfeit
+  const credits       = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null);
   const forfeiterProg = assessMeldProgress(hands[forfeiter], jokerCard);
   const penalty       = MELD_PENALTY[forfeiterProg];
 
   const ledger = _buildSpecialsLedger(playerCount, credits);
 
-  // Forfeiter pays meld penalty to each other player
   for (let p = 0; p < playerCount; p++) {
     if (p === forfeiter) continue;
     ledger[forfeiter][p] += penalty;
@@ -197,30 +197,25 @@ function calcForfeitResult(game) {
   return { forfeiter, credits, forfeiterProgress: forfeiterProg, forfeiterPenalty: penalty, netPayments };
 }
 
-// ── Invalid-win result ────────────────────────────────────────────────────────
-// Special claims: everyone pays everyone (including claimer collecting their own).
-// Additionally: claimer pays each other player based on that player's meld value
-// (sequence of 4 first; sets/sequences of 3 count only if they already have a sequence).
+// ── Invalid-win result  ("wrong DIK") ─────────────────────────────────────────
+// Mutual special credits apply.  Claimer additionally pays every other player 4 claims.
 
 function calcInvalidWinResult(game) {
-  const { invalidWinClaimer: claimer, hands, jokerCard, playerCount } = game;
+  const { invalidWinClaimer: claimer, hands, jokerCard, playerCount, pokerFromDiscard } = game;
 
-  const credits    = calcSpecialCredits(hands, jokerCard);
-  const progresses = hands.map((hand, i) =>
-    i === claimer ? null : assessMeldProgress(hand, jokerCard)
-  );
-  const meldValues = progresses.map(p => (p === null ? 0 : MELD_VALUE[p]));
+  // No winner in a wrong DIK
+  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null);
 
   const ledger = _buildSpecialsLedger(playerCount, credits);
 
-  // Claimer pays each other player based on their meld value
+  // Claimer pays 4 claims to each other player (wrong DIK penalty)
   for (let p = 0; p < playerCount; p++) {
     if (p === claimer) continue;
-    ledger[claimer][p] += meldValues[p];
+    ledger[claimer][p] += 4;
   }
 
   const netPayments = _netLedger(ledger, playerCount);
-  return { claimer, credits, meldValues, progresses, netPayments };
+  return { claimer, credits, netPayments };
 }
 
 // ── Chip breakdown ────────────────────────────────────────────────────────────

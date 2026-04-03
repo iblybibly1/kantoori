@@ -597,7 +597,7 @@ function renderGame() {
   chatBtnWrap.appendChild(chatBtn);
   chatBtnWrap.appendChild(badge);
 
-  var isDouble = jCard && jCard.suit === 'Spades' && ['A','J','7','2'].indexOf(jCard.rank) !== -1;
+  var isDouble = jCard && jCard.suit === 'Spades' && ['A','2','7','Q'].indexOf(jCard.rank) !== -1;
   var silverPill = h('div',{class:'joker-pill'+(isDouble?' dbl-game':'')},[
     h('span',{class:'jlabel'},'SILVER'),
     h('span',{style:jStyle},jSym),
@@ -645,8 +645,15 @@ function renderGame() {
   });
 
   // Table center
-  var canDrawStock   = isMyTurn && gs.phase === 'draw';
-  var canDrawDiscard = isMyTurn && gs.phase === 'draw' && !!gs.topDiscard;
+  var canDrawStock = isMyTurn && gs.phase === 'draw';
+  // Silver-card restriction: the round card starts in the discard pile and may only
+  // be picked by the first unpacked player on their very first turn.
+  var topIsSilver = gs.topDiscard && jCard &&
+    gs.topDiscard.rank === jCard.rank && gs.topDiscard.suit === jCard.suit;
+  var firstUnpacked = 0;
+  if (gs.packed) { for (var fui = 0; fui < gs.packed.length; fui++) { if (!gs.packed[fui]) { firstUnpacked = fui; break; } } }
+  var silverBlocked = topIsSilver && (mySeat !== firstUnpacked || (gs.hasActed && gs.hasActed[mySeat]));
+  var canDrawDiscard = isMyTurn && gs.phase === 'draw' && !!gs.topDiscard && !silverBlocked;
   var stock = h('div',{class:'stock-pile'+(canDrawStock?'':' nodraw')},[
     h('span',{class:'sc-num'},String(gs.stockSize)),
     h('span',{class:'sc-lbl'},'DECK'),

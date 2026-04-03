@@ -89,7 +89,14 @@ class Game {
     this.pendingThankYou = new Array(this.playerCount).fill(false);
     this.forfeited       = new Array(this.playerCount).fill(false);
 
-    // Discard-exception tracking for joker/silver scoring
+    // Tracks how many Poker (frontend name) cards each player drew from the discard pile
+    // (affects Poker thankas value: 0 from discard=6pts, 1=5pts, 2+=0pts)
+    this.pokerFromDiscard = new Array(this.playerCount).fill(0);
+
+    // Set to true after a valid DIK where no Joker wildcard was used in the winning hand
+    this.noWildcardBonus = false;
+
+    // Discard-exception tracking (legacy, kept for compatibility)
     this.specialCardOwner = new Map(); // card.id → playerIndex
   }
 
@@ -144,15 +151,33 @@ class Game {
     return card;
   }
 
-  // Pick up the top of the discard pile (or the joker on turn 1).
+  // Pick up the top of the discard pile.
+  // Restriction: the silver (jokerCard) sitting in discard at round start may only
+  // be picked by the first unpacked player on their very first turn.
   // Automatically raises pendingThankYou if the draw completes a set.
   drawFromDiscard() {
     this._requirePhase(Phase.DRAW);
     if (this.discardPile.length === 0) throw new Error('Discard pile is empty');
+
+    const topCard = this.topDiscard;
+
+    // Silver-card restriction
+    if (topCard === this.jokerCard) {
+      const firstUnpacked = this._firstUnpackedPlayer();
+      if (this.currentPlayer !== firstUnpacked || this.hasActed[this.currentPlayer]) {
+        throw new Error('Only the first active player may pick up the silver card on their first turn');
+      }
+    }
+
     const card = this.discardPile.pop();
     this.hands[this.currentPlayer].push(card);
     this.hasActed[this.currentPlayer] = true;
     this.phase = Phase.DISCARD;
+
+    // Track Poker (frontend name = backend isSilver) cards drawn from discard for scoring
+    if (card.isSilver(this.jokerCard)) {
+      this.pokerFromDiscard[this.currentPlayer]++;
+    }
 
     if (this._completesSet(card)) {
       this.pendingThankYou[this.currentPlayer] = true;
@@ -211,6 +236,9 @@ class Game {
 
     if (!partition) return this._triggerInvalidWin();
 
+    // No-wildcard bonus: check if any Joker wildcard was used in the winning hand
+    this.noWildcardBonus = !partition.flat().some(c => c.isPoker(this.jokerCard));
+
     this._endRound(this.currentPlayer);
     return partition;
   }
@@ -237,6 +265,8 @@ class Game {
     this.discardPile.push(c1, c2);
 
     if (!partition) return this._triggerInvalidWin();
+
+    this.noWildcardBonus = !partition.flat().some(c => c.isPoker(this.jokerCard));
 
     this._endRound(this.currentPlayer);
     return partition;
@@ -267,6 +297,7 @@ class Game {
       hasActed:          [...this.hasActed],
       pendingThankYou:   [...this.pendingThankYou],
       forfeited:         [...this.forfeited],
+      pokerFromDiscard:  [...this.pokerFromDiscard],
       hands: this.hands.map((hand, i) =>
         viewAs === null || viewAs === i ? [...hand] : hand.map(() => null)
       ),
@@ -274,6 +305,14 @@ class Game {
   }
 
   // ── Internal helpers ─────────────────────────────────────────────────────────
+
+  // Returns the seat index of the lowest-numbered player who hasn't packed.
+  _firstUnpackedPlayer() {
+    for (let i = 0; i < this.playerCount; i++) {
+      if (!this.packed[i]) return i;
+    }
+    return 0;
+  }
 
   _requirePhase(phase) {
     if (this.phase === Phase.ENDED) throw new Error('Round has ended');
