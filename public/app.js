@@ -367,11 +367,64 @@ function colorHex(name) {
   var c = COLORS.find(function(x){return x.name===name;}); return c ? c.hex : '#888';
 }
 
+// ── Rules Modal ────────────────────────────────────────────────────────────────
+function showRulebook() {
+  var overlay = h('div',{class:'rules-overlay'});
+  var RULES = [
+    { title:'Objective', body:'Be the first to form valid melds with your cards and declare a win. Hold the fewest special cards when an opponent wins to minimise your claims payout.' },
+    { title:'Card Types', body:
+      '<b class="rt-silver">Silver</b> — The card revealed at the start of the round (same suit). Worth <b>3 claims</b> each (the round card itself = 0).\n' +
+      '<b class="rt-poker">Poker</b> — Same colour, different suit as Silver. Worth <b>2 claims</b> each.\n' +
+      '<b class="rt-joker">Joker</b> — Different colour &amp; suit (wild card). Can replace any card in a <b>run of 3 only</b>. Two Jokers = <b>1 claim</b>.' },
+    { title:'Thankas (Set of 3)', body:
+      'Holding 3 of the same special card is called a <b>Thankas</b> and earns bonus claims — all opponents must pay:\n' +
+      '• 3× Silver = <b>12 claims</b>\n' +
+      '• 3× Poker = <b>9 claims</b>\n' +
+      '• 3× Joker = <b>6 claims</b>\n' +
+      'Breaking a Thankas by discarding one card cancels the bonus.' },
+    { title:'Special Cards', body:
+      '<b>Ace ♠</b> — Worth <b>2 claims</b> each; Thankas of Ace♠ = <b>12 claims</b>.\n' +
+      '<b>Jack ♠</b> — Worth <b>1 claim</b> each; Thankas of Jack♠ = <b>12 claims</b>.\n' +
+      'A normal Thankas (any other rank) = <b>6 claims</b>.' },
+    { title:'Double Game', body:'If the Silver card is the <b>A, J, 7, or 2 of Spades</b>, all claims for that round are <b>doubled</b>. A ×2 badge appears next to the Silver card.' },
+    { title:'Valid Melds', body:
+      '<b>Run (Sequence):</b> 3 or 4 consecutive cards of the same suit (e.g. 5♥ 6♥ 7♥). A Joker may substitute one card in a 3-card run only.\n' +
+      '<b>Set:</b> 3 or 4 cards of the same rank, different suits.' },
+    { title:'Gameplay', body:
+      '1. Each player is dealt cards from the Deck.\n' +
+      '2. On your turn: draw from the Deck <em>or</em> pick up the top Discard.\n' +
+      '3. Discard one card to the Discard pile to end your turn.\n' +
+      '4. Arrange your hand by dragging cards.\n' +
+      '5. When you can form all cards into valid melds, select them and declare <b>WIN</b>.' },
+    { title:'Scoring', body:
+      'The winner pays 0 claims. Losers pay based on unmelded special cards in hand (see Card Types &amp; Thankas above). The Bank collects/distributes chips accordingly.' },
+  ];
+  var sections = RULES.map(function(r){
+    var body = h('p',{class:'rb-body'});
+    body.innerHTML = r.body.replace(/\n/g,'<br>');
+    return h('div',{class:'rb-section'},[
+      h('div',{class:'rb-title'},r.title),
+      body,
+    ]);
+  });
+  var modal = h('div',{class:'rules-modal'},[
+    h('div',{class:'rules-header'},[
+      h('div',{class:'rules-heading'},'📖 Kantoori Rules'),
+      (function(){ var x=h('button',{class:'rules-close'},'✕'); x.addEventListener('click',function(){document.body.removeChild(overlay);}); return x; })(),
+    ]),
+    h('div',{class:'rules-body'},sections),
+  ]);
+  overlay.appendChild(modal);
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) document.body.removeChild(overlay); });
+  document.body.appendChild(overlay);
+}
+
 // ── Home ───────────────────────────────────────────────────────────────────────
 function renderHome() {
   var inp = h('input',{type:'text',placeholder:'Room code',style:'text-transform:uppercase;letter-spacing:3px;font-weight:700'});
   var create = h('button',{class:'btn-g',style:'font-size:17px;padding:14px'},'Create Game');
   var join   = h('button',{class:'btn-b',style:'padding:11px 20px'},'Join');
+  var rules  = h('button',{class:'btn-neu',style:'padding:10px;font-size:13px;width:100%;max-width:300px;margin-top:4px'},'📖 Rules');
   create.addEventListener('click', function(){state.setupMode='create';state.screen='setup';render();});
   join.addEventListener('click', function(){
     var code = inp.value.trim().toUpperCase();
@@ -379,11 +432,13 @@ function renderHome() {
     state.setupMode='join'; state.joinCode=code; state.screen='setup'; render();
   });
   inp.addEventListener('keydown', function(e){if(e.key==='Enter') join.click();});
+  rules.addEventListener('click', showRulebook);
   return h('div',{class:'screen'},[
     h('div',{class:'logo'},'KANTOORI'),
     h('div',{class:'tagline'},'Multiplayer Card Game'),
     h('div',{class:'home-btns'},[create]),
     h('div',{class:'join-row',style:'margin-top:12px'},[inp,join]),
+    rules,
   ]);
 }
 
