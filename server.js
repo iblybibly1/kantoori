@@ -313,6 +313,18 @@ io.on('connection', (socket) => {
     rooms.delete(room.code);
   });
 
+  // ── announce-thankas ──────────────────────────────────────────────────────────
+  socket.on('announce-thankas', () => {
+    const room = getPlayerRoom(socket);
+    if (!room || room.phase !== 'playing') return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+    io.to(room.code).emit('thankas-announce', {
+      nickname: player.nickname,
+      color:    player.color,
+    });
+  });
+
   // ── chat-message ─────────────────────────────────────────────────────────────
   socket.on('chat-message', ({ text }) => {
     const room = getPlayerRoom(socket);

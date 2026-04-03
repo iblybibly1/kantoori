@@ -123,27 +123,18 @@ function calcSpecialCredits(hands, jokerCard) {
   return credits;
 }
 
-// ── Shared: one player pays all others ────────────────────────────────────────
+// ── Shared: mutual special-card payments ledger ───────────────────────────────
+// All players pay everyone else's special credits regardless of outcome.
 
-function _payerPaysAll(payerIndex, playerCount, credits, amountFn) {
+function _buildSpecialsLedger(playerCount, credits) {
   const ledger = Array.from({ length: playerCount }, () => new Array(playerCount).fill(0));
-
-  // Payer → each other player
-  for (let p = 0; p < playerCount; p++) {
-    if (p === payerIndex) continue;
-    ledger[payerIndex][p] += credits[p] + amountFn(p);
-  }
-
-  // Non-payer players still pay each other for specials (payer's credits excluded)
-  for (let a = 0; a < playerCount; a++) {
-    if (a === payerIndex) continue;
-    for (let b = 0; b < playerCount; b++) {
-      if (b === payerIndex || b === a) continue;
-      ledger[a][b] += credits[b];
+  for (let to = 0; to < playerCount; to++) {
+    if (credits[to] === 0) continue;
+    for (let from = 0; from < playerCount; from++) {
+      if (from !== to) ledger[from][to] += credits[to];
     }
   }
-
-  return _netLedger(ledger, playerCount);
+  return ledger;
 }
 
 // ── Normal round result ────────────────────────────────────────────────────────
@@ -183,6 +174,8 @@ function calcRoundResult(game) {
 }
 
 // ── Forfeit-win result ────────────────────────────────────────────────────────
+// Special claims: everyone pays everyone (including forfeiter collecting their own).
+// Additionally: forfeiter pays each other player their meld penalty.
 
 function calcForfeitResult(game) {
   const { forfeiter, hands, jokerCard, playerCount } = game;
@@ -191,12 +184,22 @@ function calcForfeitResult(game) {
   const forfeiterProg = assessMeldProgress(hands[forfeiter], jokerCard);
   const penalty       = MELD_PENALTY[forfeiterProg];
 
-  const netPayments = _payerPaysAll(forfeiter, playerCount, credits, () => penalty);
+  const ledger = _buildSpecialsLedger(playerCount, credits);
 
+  // Forfeiter pays meld penalty to each other player
+  for (let p = 0; p < playerCount; p++) {
+    if (p === forfeiter) continue;
+    ledger[forfeiter][p] += penalty;
+  }
+
+  const netPayments = _netLedger(ledger, playerCount);
   return { forfeiter, credits, forfeiterProgress: forfeiterProg, forfeiterPenalty: penalty, netPayments };
 }
 
 // ── Invalid-win result ────────────────────────────────────────────────────────
+// Special claims: everyone pays everyone (including claimer collecting their own).
+// Additionally: claimer pays each other player based on that player's meld value
+// (sequence of 4 first; sets/sequences of 3 count only if they already have a sequence).
 
 function calcInvalidWinResult(game) {
   const { invalidWinClaimer: claimer, hands, jokerCard, playerCount } = game;
@@ -207,8 +210,15 @@ function calcInvalidWinResult(game) {
   );
   const meldValues = progresses.map(p => (p === null ? 0 : MELD_VALUE[p]));
 
-  const netPayments = _payerPaysAll(claimer, playerCount, credits, p => meldValues[p]);
+  const ledger = _buildSpecialsLedger(playerCount, credits);
 
+  // Claimer pays each other player based on their meld value
+  for (let p = 0; p < playerCount; p++) {
+    if (p === claimer) continue;
+    ledger[claimer][p] += meldValues[p];
+  }
+
+  const netPayments = _netLedger(ledger, playerCount);
   return { claimer, credits, meldValues, progresses, netPayments };
 }
 

@@ -572,6 +572,37 @@ select option { background: #0f1f12; }
   .status-bar { padding: 2px 12px; min-height: 18px; font-size: 10px; }
 }
 
+/* ── Thankas Notification Banner ─────────────────────────────────────────── */
+.thankas-notif {
+  position: fixed;
+  top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 3000;
+  background: linear-gradient(135deg, #1a4a28, #0d2e18);
+  border: 1.5px solid var(--gold);
+  border-radius: 12px;
+  padding: 12px 18px 8px;
+  min-width: 220px; max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,.7), 0 0 20px rgba(241,196,15,.25);
+  text-align: center;
+  animation: thankas-drop .25s ease-out;
+}
+@keyframes thankas-drop {
+  from { opacity:0; transform: translateX(-50%) translateY(-16px); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+.thankas-msg {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  margin-bottom: 8px;
+}
+.thankas-bar-wrap {
+  height: 3px; background: rgba(255,255,255,.15); border-radius: 2px; overflow: hidden;
+}
+.thankas-bar {
+  height: 100%; width: 100%; background: var(--gold);
+  border-radius: 2px;
+  transition: width 10s linear;
+}
+
 /* ── Rulebook Modal ───────────────────────────────────────────────────────── */
 .rules-overlay {
   position: fixed; inset: 0; z-index: 2000;

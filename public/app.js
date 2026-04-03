@@ -195,6 +195,10 @@ function initSocket() {
     state.screen = 'session-end'; state.roomInfo = { players: data.players }; render();
   });
 
+  socket.on('thankas-announce', function(data) {
+    showThankasNotif(data.nickname, data.color);
+  });
+
   socket.on('chat-msg', function(msg) {
     state.chatMessages.push(msg);
     if (state.chatMessages.length > 100) state.chatMessages.shift();
@@ -210,6 +214,29 @@ function initSocket() {
       socket.emit('join-room', { code: state.roomInfo.code, nickname: state.nickname, color: state.color });
     }
   });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Thankas notification (10-second broadcast banner) ─────────────────────────
+function showThankasNotif(nickname, color) {
+  var existing = document.getElementById('thankas-notif');
+  if (existing) { clearTimeout(existing._tid); existing.remove(); }
+  var hex = colorHex(color);
+  var notif = document.createElement('div');
+  notif.id = 'thankas-notif';
+  notif.className = 'thankas-notif';
+  notif.innerHTML =
+    '<div class="thankas-msg"><span style="color:' + hex + ';font-weight:900">' +
+    escHtml(nickname) + '</span> called <b>Thankas! 🏆</b></div>' +
+    '<div class="thankas-bar-wrap"><div class="thankas-bar" id="thankas-bar"></div></div>';
+  document.body.appendChild(notif);
+  // Kick off the shrinking bar after paint
+  setTimeout(function() { var b=document.getElementById('thankas-bar'); if(b) b.style.width='0'; }, 50);
+  notif._tid = setTimeout(function() { if (notif.parentNode) notif.remove(); }, 10000);
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
@@ -739,9 +766,18 @@ function toggleSel(origIdx) {
 
 function buildActions(gs, isMyTurn, mySeat) {
   var nodes = [];
+
+  // ── Thankas announce button — always visible ───────────────────────────────
+  var tkb = h('button',{class:'btn-gold',style:'font-size:12px;padding:6px 10px;min-height:32px;'},'🏆 Thankas!');
+  tkb.addEventListener('click', function() {
+    socket.emit('announce-thankas');
+  });
+  // We'll push it at the end so it doesn't crowd the main actions
+
   if (!isMyTurn) {
     var cp = state.roomInfo.players.find(function(p){return p.seatIndex===gs.currentPlayer;});
     nodes.push(h('span',{class:'ainfo'},'Waiting for '+(cp?cp.nickname:'…')+'…'));
+    nodes.push(tkb);
     return nodes;
   }
   if (gs.phase === 'draw') {
@@ -753,7 +789,8 @@ function buildActions(gs, isMyTurn, mySeat) {
       db.addEventListener('click',function(){socket.emit('game-action',{type:'draw-discard'});});
       nodes.push(db);
     }
-    if (gs.isFirstTurn && !gs.hasActed[mySeat]) {
+    // Pack: available on each player's very first turn before drawing
+    if (!gs.hasActed[mySeat]) {
       var pb = h('button',{class:'btn-o'},'Pack');
       pb.addEventListener('click',function(){showModal('Pack this round?','You sit out and owe 1 chip to winner.','Pack',function(){socket.emit('game-action',{type:'pack'});},'btn-o');});
       nodes.push(pb);
@@ -780,6 +817,7 @@ function buildActions(gs, isMyTurn, mySeat) {
     });
     nodes.push(dik);
   }
+  nodes.push(tkb);
   return nodes;
 }
 
