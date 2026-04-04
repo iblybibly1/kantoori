@@ -417,33 +417,81 @@ function colorHex(name) {
 function showRulebook() {
   var overlay = h('div',{class:'rules-overlay'});
   var RULES = [
-    { title:'Objective', body:'Be the first to form valid melds with your cards and declare a win. Hold the fewest special cards when an opponent wins to minimise your claims payout.' },
-    { title:'Card Types', body:
-      '<b class="rt-silver">Silver</b> — The card revealed at the start of the round (same suit). Worth <b>3 claims</b> each (the round card itself = 0).\n' +
-      '<b class="rt-poker">Poker</b> — Same colour, different suit as Silver. Worth <b>2 claims</b> each.\n' +
-      '<b class="rt-joker">Joker</b> — Different colour &amp; suit (wild card). Can replace any card in a <b>run of 3 only</b>. Two Jokers = <b>1 claim</b>.' },
-    { title:'Thankas (Set of 3)', body:
-      'Holding 3 of the same special card is called a <b>Thankas</b> and earns bonus claims — all opponents must pay:\n' +
-      '• 3× Silver = <b>12 claims</b>\n' +
-      '• 3× Poker = <b>9 claims</b>\n' +
-      '• 3× Joker = <b>6 claims</b>\n' +
-      'Breaking a Thankas by discarding one card cancels the bonus.' },
-    { title:'Special Cards', body:
-      '<b>Ace ♠</b> — Worth <b>2 claims</b> each; Thankas of Ace♠ = <b>12 claims</b>.\n' +
-      '<b>Jack ♠</b> — Worth <b>1 claim</b> each; Thankas of Jack♠ = <b>12 claims</b>.\n' +
-      'A normal Thankas (any other rank) = <b>6 claims</b>.' },
-    { title:'Double Game', body:'If the Silver card is the <b>A, J, 7, or 2 of Spades</b>, all claims for that round are <b>doubled</b>. A ×2 badge appears next to the Silver card.' },
-    { title:'Valid Melds', body:
-      '<b>Run (Sequence):</b> 3 or 4 consecutive cards of the same suit (e.g. 5♥ 6♥ 7♥). A Joker may substitute one card in a 3-card run only.\n' +
-      '<b>Set:</b> 3 or 4 cards of the same rank, different suits.' },
-    { title:'Gameplay', body:
-      '1. Each player is dealt cards from the Deck.\n' +
-      '2. On your turn: draw from the Deck <em>or</em> pick up the top Discard.\n' +
-      '3. Discard one card to the Discard pile to end your turn.\n' +
-      '4. Arrange your hand by dragging cards.\n' +
-      '5. When you can form all cards into valid melds, select them and declare <b>WIN</b>.' },
-    { title:'Scoring', body:
-      'The winner pays 0 claims. Losers pay based on unmelded special cards in hand (see Card Types &amp; Thankas above). The Bank collects/distributes chips accordingly.' },
+    { title:'🎯 Objective',
+      body:'Each player is dealt <b>13 cards</b>. On your turn, draw one card and discard one. ' +
+           'Your goal is to arrange all your cards into valid groups (melds) and declare <b>DIK!</b> to win the round. ' +
+           'Everyone pays <b>claims</b> (chips) to players who hold special cards — even if you lose, your special cards earn you money from all opponents.' },
+
+    { title:'🃏 The Silver Card',
+      body:'At the start of each round, one card is flipped face-up — this is the <b>Silver card</b> (also called the round card). ' +
+           'Its rank determines three special card types for that round:\n\n' +
+           '• <b class="rt-silver">Silver</b> — Exact same rank <i>and</i> suit as the round card (but not the round card itself). Worth <b>2 claims</b> each from every other player.\n' +
+           '• <b class="rt-poker">Poker</b> — Same rank, same colour, <i>different</i> suit. Worth <b>1 claim</b> each from every other player.\n' +
+           '• <b class="rt-joker">Joker (Wild)</b> — Same rank, <i>opposite</i> colour. Acts as a wildcard in a 3-card run. Worth claims too (see below).\n\n' +
+           'All other cards are <b>normal</b> cards.' },
+
+    { title:'💰 Claims — What You Earn',
+      body:'Claims are chips paid by <i>every other player</i> to whoever holds the card. This happens at the end of every round regardless of who won.\n\n' +
+           '<b class="rt-silver">Silver cards:</b> 2 claims each. 3 Silvers (Thankas) = <b>7 claims</b>.\n' +
+           '<b class="rt-poker">Poker cards:</b> 1 claim each. 3 Pokers (Thankas) = <b>6 claims</b> (if none picked from discard), <b>5 claims</b> (if 1 picked from discard), <b>0 claims</b> (if 2+ picked from discard — still counts as a set).\n' +
+           '<b class="rt-joker">Joker wildcards:</b> Winner gets 1 claim per Joker. Non-winners: 1 Joker = 0 claims, 2 Jokers = 1 claim, 3 Jokers (Thankas) = <b>9 claims</b>.\n' +
+           '<b>Ace ♠:</b> 1 claim each (only if not already Silver/Poker/Joker).\n' +
+           '<b>Normal Thankas:</b> 3 identical cards (same rank + suit) = <b>3 claims</b>. Two Thankas = <b>7 claims</b>. Three Thankas = <b>11 claims</b>.\n\n' +
+           'All claims are paid <b>mutually</b> — if two players both have special cards, they pay each other.' },
+
+    { title:'⚡ Double Game',
+      body:'If the Silver card (round card) is the <b>A♠, 2♠, 7♠ or Q♠</b>, the entire round is a <b>Double Game</b>. ' +
+           'Every claim earned by every player is multiplied by ×2. A red ×2 badge appears in the header when this is active.' },
+
+    { title:'🏆 Thankas — Calling It Out',
+      body:'A <b>Thankas</b> is when you have 3 or more of the same special card (or 3 identical normal cards).\n\n' +
+           'If you pick a card from the discard pile and it completes a Thankas in your hand, you <b>MUST</b> press the <b>Thank You</b> button before your next turn. ' +
+           'If you forget, your Thankas claims are forfeited that round (but the set still counts as a valid meld).\n\n' +
+           'You can also press the <b>🏆 Thankas!</b> button at any time to announce to all players that you have a Thankas. ' +
+           'If you press it without actually having one… well, <i>LORA MERA!</i> 🤡 (only you will see that message).' },
+
+    { title:'🔄 How a Turn Works',
+      body:'<b>1. Draw</b> — Pick one card from the face-down Deck, OR pick up the top card of the Discard pile.\n' +
+           '   ↳ Only the first unpacked player may pick the Silver card from the discard on their very first turn.\n\n' +
+           '<b>2. (If needed) Thank You</b> — If the card you just picked from the discard completes a Thankas, press Thank You now.\n\n' +
+           '<b>3. Discard or Declare</b> — Either discard one card to end your turn, or select cards and press ⚡ DIK! to declare a win.\n\n' +
+           '<b>Sorting your hand:</b> Hold and drag any card left or right to rearrange. Your order is saved across turns.' },
+
+    { title:'✅ Winning — DIK!',
+      body:'There are two ways to win:\n\n' +
+           '<b>Win 1 (discard 1 card):</b> Your remaining 13 cards must form:\n' +
+           '   • 1 Run of 4 (four consecutive cards, same suit)\n' +
+           '   • 3 Sets/Runs of 3\n\n' +
+           '<b>Win 2 (discard 2 cards):</b> Your remaining 12 cards must form:\n' +
+           '   • 4 Sets/Runs of 3 (no run of 4 needed)\n\n' +
+           'A <b>Run</b> is 3–4 consecutive cards of the same suit (e.g. 7♥ 8♥ 9♥). Ace can be low (A-2-3) or high (J-Q-K-A). ' +
+           'A Joker wildcard can fill one gap in a 3-card run only.\n' +
+           'A <b>Set</b> is 3–4 cards of the exact same rank AND suit.\n\n' +
+           'Select your extra card(s) and press ⚡ DIK! to declare. If your hand is valid you win. If not, you pay <b>4 claims</b> to every other active player — this is a <b>Wrong DIK</b>.\n\n' +
+           '<b>Bonus:</b> If you win without using any Joker wildcards in your winning hand, you earn <b>+2 extra claims</b> from everyone.' },
+
+    { title:'📦 Packing',
+      body:'Before drawing on your very first turn, you may press <b>Pack</b> to sit out the round as a spectator. ' +
+           'You owe <b>1 claim</b> to whoever wins that round. You pay nothing else and earn nothing else — special cards in your hand do not count. ' +
+           'The last remaining active player cannot pack.' },
+
+    { title:'😬 Missed Thank-You (Forfeit)',
+      body:'If you drew a card from the discard pile that completed a Thankas but forgot to press Thank You before your next turn, ' +
+           'you are <b>forfeited</b>. If you then try to declare DIK!, it triggers a forfeit instead of a win: ' +
+           'you pay your <b>meld penalty</b> to every other active player.' },
+
+    { title:'📊 Meld Penalty (for losers)',
+      body:'When someone wins, each losing player pays the winner a <b>meld penalty</b> based on how close they were to winning:\n\n' +
+           '• No run of 4 at all → <b>4 claims</b>\n' +
+           '• Has a run of 4, no sets of 3 → <b>6 claims</b>\n' +
+           '• Run of 4 + 1 set → <b>3 claims</b>\n' +
+           '• Run of 4 + 2 sets → <b>1 claim</b>\n' +
+           '• Run of 4 + 3 sets (complete hand) → <b>0 claims</b>\n\n' +
+           'Packed players only pay the 1-claim packing cost, not the meld penalty.' },
+
+    { title:'🔁 Round Rotation',
+      body:'After each round, the first turn rotates <b>anticlockwise</b> so every player gets to go first equally over time. ' +
+           'Keep playing rounds until the host ends the session.' },
   ];
   var sections = RULES.map(function(r){
     var body = h('p',{class:'rb-body'});
