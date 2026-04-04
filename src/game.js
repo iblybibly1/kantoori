@@ -44,7 +44,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Deck } from './deck.js';
-import { findWin1, findWin2 } from './melds.js';
+import { findWin1, findWin2Thankas } from './melds.js';
 
 const HAND_SIZE = 13;
 
@@ -96,6 +96,9 @@ class Game {
 
     // Set to true after a valid DIK where no Joker wildcard was used in the winning hand
     this.noWildcardBonus = false;
+
+    // Populated only after a Win 2 DIK; holds the 4 discarded cards for scoring
+    this.win2DiscardedCards = [];
 
     // Discard-exception tracking (legacy, kept for compatibility)
     this.specialCardOwner = new Map(); // card.id → playerIndex
@@ -211,13 +214,14 @@ class Game {
 
   // ── DISCARD phase: DIK! declaration ─────────────────────────────────────────
 
-  // Win 1: discard 1 card, remaining 10 must be run(4)+meld(3)+meld(3).
-  // Returns winning partition on success, or { invalidWin: true } on failure.
-  // If player is forfeited, returns { forfeit: true }.
-  declare(cardIndex, cardIndex2 = null) {
-    // Route to Win 1 or Win 2
-    if (cardIndex2 === null) return this._declareWin1(cardIndex);
-    return this._declareWin2(cardIndex, cardIndex2);
+  // Win 1: pass a single cardIndex to discard 1 card.
+  //   Remaining 13 cards must form run(4)+meld(3)+meld(3)+meld(3).
+  // Win 2: pass an array of 4 cardIndices to discard 4 cards.
+  //   Remaining 9 cards must form exactly 3 valid Thankas groups.
+  //   Discarded cards still contribute their claims to the winner.
+  declare(cardIndexOrArray) {
+    if (Array.isArray(cardIndexOrArray)) return this._declareWin2(cardIndexOrArray);
+    return this._declareWin1(cardIndexOrArray);
   }
 
   _declareWin1(cardIndex) {
@@ -244,29 +248,38 @@ class Game {
     return partition;
   }
 
-  _declareWin2(cardIndex1, cardIndex2) {
+  _declareWin2(indices) {
     this._requirePhase(Phase.DISCARD);
     if (this._isForfeitingPlayer()) return this._triggerForfeitWin();
-    if (cardIndex1 === cardIndex2) throw new Error('Must discard two different cards');
+    if (indices.length !== 4) throw new Error('Win 2 requires exactly 4 cards to discard');
+
+    const unique = new Set(indices);
+    if (unique.size !== 4) throw new Error('Must discard 4 different cards');
 
     const hand = this.hands[this.currentPlayer];
-    if (cardIndex1 < 0 || cardIndex1 >= hand.length ||
-        cardIndex2 < 0 || cardIndex2 >= hand.length) throw new Error('Invalid card index');
+    for (const i of indices) {
+      if (i < 0 || i >= hand.length) throw new Error('Invalid card index');
+    }
 
-    const toDiscard = new Set([cardIndex1, cardIndex2]);
+    const toDiscard = new Set(indices);
     const remaining = hand.filter((_, i) => !toDiscard.has(i));
-    const partition = findWin2(remaining, this.jokerCard);
+    const partition = findWin2Thankas(remaining, this.jokerCard, this.pokerFromDiscard[this.currentPlayer]);
 
-    // Always discard both cards regardless of outcome
-    const [hi, lo] = [cardIndex1, cardIndex2].sort((a, b) => b - a);
-    const c1 = this._spliceCard(this.currentPlayer, hi);
-    const c2 = this._spliceCard(this.currentPlayer, lo);
-    this._trackSpecialDiscard(c1);
-    this._trackSpecialDiscard(c2);
-    this.discardPile.push(c1, c2);
+    // Always discard all 4 cards regardless of outcome; remove high-to-low to keep indices valid
+    const sorted = [...indices].sort((a, b) => b - a);
+    const discarded = sorted.map(i => {
+      const c = this._spliceCard(this.currentPlayer, i);
+      this._trackSpecialDiscard(c);
+      return c;
+    });
+    this.discardPile.push(...discarded);
 
     if (!partition) return this._triggerInvalidWin();
 
+    // Store discarded cards so scoring can include their claims for the winner
+    this.win2DiscardedCards = discarded;
+
+    // No-wildcard bonus: true only if no Joker used in the 3 Thankas groups
     this.noWildcardBonus = !partition.flat().some(c => c.isPoker(this.jokerCard));
 
     this._endRound(this.currentPlayer);

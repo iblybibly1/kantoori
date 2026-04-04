@@ -265,8 +265,13 @@ io.on('connection', (socket) => {
           break;
 
         case 'declare': {
-          const ci2 = data.cardIndex2 !== undefined ? data.cardIndex2 : null;
-          result = game.declare(data.cardIndex, ci2);
+          // Win 2: client sends cardIndices (array of 4)
+          // Win 1: client sends cardIndex (single number)
+          if (Array.isArray(data.cardIndices)) {
+            result = game.declare(data.cardIndices);
+          } else {
+            result = game.declare(data.cardIndex);
+          }
           break;
         }
 

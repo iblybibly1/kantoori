@@ -188,9 +188,40 @@ function _combos(arr, r) {
   return result;
 }
 
+// Win 2 (3 Thankas): 9-card hand must form exactly 3 valid Thankas groups.
+// A Thankas group = 3 cards of the same Thankas type:
+//   Silver type   → 3 Silver cards
+//   Poker type    → 3 Poker cards  (INVALID if pokerFromDiscardCount ≥ 2)
+//   Joker type    → 3 Joker wildcards
+//   Normal        → 3 cards of same rank + same suit
+// Returns [[g1],[g2],[g3]] or null.
+function findWin2Thankas(hand, jokerCard, pokerFromDiscardCount) {
+  if (hand.length !== 9) return null;
+
+  const buckets = new Map();
+  for (const c of hand) {
+    let key;
+    if      (c.isJoker(jokerCard))   key = '__silver__';
+    else if (c.isSilver(jokerCard))  key = '__poker__';
+    else if (c.isPoker(jokerCard))   key = '__joker__';
+    else                              key = c.rank + '|' + c.suit;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(c);
+  }
+
+  const groups = [];
+  for (const [key, cards] of buckets) {
+    if (cards.length % 3 !== 0) return null;
+    if (key === '__poker__' && (pokerFromDiscardCount || 0) >= 2) return null;
+    for (let i = 0; i < cards.length; i += 3) groups.push(cards.slice(i, i + 3));
+  }
+
+  return groups.length === 3 ? groups : null;
+}
+
 // Sum of card point values (used for deadwood / penalty scoring)
 function deadwoodValue(cards) {
   return cards.reduce((sum, c) => sum + c.value, 0);
 }
 
-export { isSet, isRun, isMeld, findWin1, findWin2, assessMeldProgress, deadwoodValue, _combos };
+export { isSet, isRun, isMeld, findWin1, findWin2, findWin2Thankas, assessMeldProgress, deadwoodValue, _combos };

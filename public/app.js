@@ -462,8 +462,10 @@ function showRulebook() {
            '<b>Win 1 (discard 1 card):</b> Your remaining 13 cards must form:\n' +
            '   • 1 Run of 4 (four consecutive cards, same suit)\n' +
            '   • 3 Sets/Runs of 3\n\n' +
-           '<b>Win 2 (discard 2 cards):</b> Your remaining 12 cards must form:\n' +
-           '   • 4 Sets/Runs of 3 (no run of 4 needed)\n\n' +
+           '<b>Win 2 (discard 4 cards):</b> Your remaining 9 cards must form:\n' +
+           '   • Exactly 3 valid Thankas groups (3 Silver, 3 Poker, 3 Joker, or 3 identical normal cards each)\n' +
+           '   • A Poker Thankas is invalid if 2 or more Poker cards were picked from the discard pile\n' +
+           '   • The 4 discarded cards still earn their claims for you\n\n' +
            'A <b>Run</b> is 3–4 consecutive cards of the same suit (e.g. 7♥ 8♥ 9♥). Ace can be low (A-2-3) or high (J-Q-K-A). ' +
            'A Joker wildcard can fill one gap in a 3-card run only.\n' +
            'A <b>Set</b> is 3–4 cards of the exact same rank AND suit.\n\n' +
@@ -833,7 +835,7 @@ function renderGame() {
 
 function toggleSel(origIdx) {
   var pos = state.selectedCards.indexOf(origIdx);
-  if (pos === -1) { if (state.selectedCards.length >= 2) state.selectedCards.shift(); state.selectedCards.push(origIdx); }
+  if (pos === -1) { if (state.selectedCards.length >= 4) state.selectedCards.shift(); state.selectedCards.push(origIdx); }
   else state.selectedCards.splice(pos, 1);
   render();
 }
@@ -882,12 +884,18 @@ function buildActions(gs, isMyTurn, mySeat) {
     disc.addEventListener('click',function(){if(sel.length!==1)return;socket.emit('game-action',{type:'discard',data:{cardIndex:sel[0]}});});
     nodes.push(disc);
     var dik = h('button',{class:'btn-r',style:'font-size:15px'},'⚡ DIK!');
-    dik.disabled = sel.length !== 1 && sel.length !== 2;
+    dik.disabled = sel.length !== 1 && sel.length !== 4;
     dik.addEventListener('click',function(){
-      if (sel.length!==1&&sel.length!==2) return;
-      var dd = sel.length===1?{cardIndex:sel[0]}:{cardIndex:sel[0],cardIndex2:sel[1]};
-      var wt = sel.length===1?'Win 1 (discard 1)':'Win 2 (discard 2)';
-      showModal('⚡ DIK! — Declare','Declare '+wt+'? If invalid you pay all players.','Declare!',function(){socket.emit('game-action',{type:'declare',data:dd});},'btn-r');
+      if (sel.length!==1&&sel.length!==4) return;
+      var dd, wt;
+      if (sel.length === 1) {
+        dd = { cardIndex: sel[0] };
+        wt = 'Win 1 — discard 1, need run of 4 + 3 sets';
+      } else {
+        dd = { cardIndices: sel.slice() };
+        wt = 'Win 2 — discard 4, need 3 Thankas groups';
+      }
+      showModal('⚡ DIK! — '+wt.split('—')[0].trim(),'Declare '+wt+'? If invalid you pay 4 claims to all players.','Declare!',function(){socket.emit('game-action',{type:'declare',data:dd});},'btn-r');
     });
     nodes.push(dik);
   }

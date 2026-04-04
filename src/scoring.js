@@ -147,9 +147,24 @@ function _buildSpecialsLedger(playerCount, credits, packed) {
 // ── Normal round result ────────────────────────────────────────────────────────
 
 function calcRoundResult(game) {
-  const { winner, hands, jokerCard, playerCount, packed, pokerFromDiscard, noWildcardBonus } = game;
+  const { winner, hands, jokerCard, playerCount, packed, pokerFromDiscard, noWildcardBonus, win2DiscardedCards } = game;
 
   const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winner, packed);
+
+  // Win 2 discarded cards: their claim values still count for the winner.
+  // We treat them as a fake single-card "hand" and add the raw points.
+  if (winner !== null && win2DiscardedCards && win2DiscardedCards.length > 0) {
+    const mult = isDoubleGame(jokerCard) ? 2 : 1;
+    let discPts = 0;
+    for (const c of win2DiscardedCards) {
+      if (c.isJoker(jokerCard) && c !== jokerCard) discPts += 2;   // Silver
+      else if (c.isSilver(jokerCard)) discPts += 1;                // Poker
+      else if (c.isPoker(jokerCard)) discPts += 1;                 // Joker wildcard (winner)
+      else if (c.rank === 'A' && c.suit === 'Spades' &&
+               !c.isJoker(jokerCard) && !c.isSilver(jokerCard) && !c.isPoker(jokerCard)) discPts += 1; // Ace♠
+    }
+    credits[winner] += discPts * mult;
+  }
 
   // No-wildcard bonus: winner used no Joker wildcards → +2 extra claims (×2 if double game)
   if (noWildcardBonus && winner !== null) {
