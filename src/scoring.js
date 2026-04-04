@@ -62,12 +62,14 @@ function isDoubleGame(jokerCard) {
 // pokerFromDiscard[p] = how many Poker cards player p drew from the discard pile
 // winnerIndex = seat index of winner, or null for no winner
 
-function calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winnerIndex) {
+function calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winnerIndex, packed) {
   const n    = hands.length;
   const mult = isDoubleGame(jokerCard) ? 2 : 1;
   const credits = new Array(n).fill(0);
 
   for (let p = 0; p < n; p++) {
+    // Packed players sit out — no special card credits earned or owed
+    if (packed && packed[p]) continue;
     const hand     = hands[p];
     const isWinner = (p === winnerIndex);
     let pts = 0;
@@ -130,12 +132,13 @@ function calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winnerIndex) {
 // ── Shared: mutual special-card payments ledger ───────────────────────────────
 // All players pay everyone else's special credits regardless of outcome.
 
-function _buildSpecialsLedger(playerCount, credits) {
+function _buildSpecialsLedger(playerCount, credits, packed) {
   const ledger = Array.from({ length: playerCount }, () => new Array(playerCount).fill(0));
   for (let to = 0; to < playerCount; to++) {
     if (credits[to] === 0) continue;
+    if (packed && packed[to]) continue;  // packed players don't receive special credits
     for (let from = 0; from < playerCount; from++) {
-      if (from !== to) ledger[from][to] += credits[to];
+      if (from !== to && !(packed && packed[from])) ledger[from][to] += credits[to];
     }
   }
   return ledger;
@@ -146,7 +149,7 @@ function _buildSpecialsLedger(playerCount, credits) {
 function calcRoundResult(game) {
   const { winner, hands, jokerCard, playerCount, packed, pokerFromDiscard, noWildcardBonus } = game;
 
-  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winner);
+  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winner, packed);
 
   // No-wildcard bonus: winner used no Joker wildcards → +2 extra claims (×2 if double game)
   if (noWildcardBonus && winner !== null) {
@@ -154,15 +157,15 @@ function calcRoundResult(game) {
   }
 
   const meldProgress = hands.map((hand, i) =>
-    i === winner ? null : assessMeldProgress(hand, jokerCard)
+    (i === winner || packed[i]) ? null : assessMeldProgress(hand, jokerCard)
   );
   const meldPenalty = meldProgress.map(p => (p === null ? 0 : MELD_PENALTY[p]));
 
-  const ledger = _buildSpecialsLedger(playerCount, credits);
+  const ledger = _buildSpecialsLedger(playerCount, credits, packed);
 
-  // Each loser pays winner the meld penalty
+  // Each non-packed loser pays winner the meld penalty
   for (let loser = 0; loser < playerCount; loser++) {
-    if (loser === winner) continue;
+    if (loser === winner || packed[loser]) continue;
     ledger[loser][winner] += meldPenalty[loser];
   }
 
@@ -179,17 +182,18 @@ function calcRoundResult(game) {
 // Mutual special credits apply.  Forfeiter additionally pays meld penalty to all.
 
 function calcForfeitResult(game) {
-  const { forfeiter, hands, jokerCard, playerCount, pokerFromDiscard } = game;
+  const { forfeiter, hands, jokerCard, playerCount, pokerFromDiscard, packed } = game;
 
   // No winner in a forfeit
-  const credits       = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null);
+  const credits       = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null, packed);
   const forfeiterProg = assessMeldProgress(hands[forfeiter], jokerCard);
   const penalty       = MELD_PENALTY[forfeiterProg];
 
-  const ledger = _buildSpecialsLedger(playerCount, credits);
+  const ledger = _buildSpecialsLedger(playerCount, credits, packed);
 
+  // Forfeiter pays meld penalty only to non-packed players
   for (let p = 0; p < playerCount; p++) {
-    if (p === forfeiter) continue;
+    if (p === forfeiter || (packed && packed[p])) continue;
     ledger[forfeiter][p] += penalty;
   }
 
@@ -201,16 +205,17 @@ function calcForfeitResult(game) {
 // Mutual special credits apply.  Claimer additionally pays every other player 4 claims.
 
 function calcInvalidWinResult(game) {
-  const { invalidWinClaimer: claimer, hands, jokerCard, playerCount, pokerFromDiscard } = game;
+  const { invalidWinClaimer: claimer, hands, jokerCard, playerCount, pokerFromDiscard, packed } = game;
 
   // No winner in a wrong DIK
-  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null);
+  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null, packed);
 
-  const ledger = _buildSpecialsLedger(playerCount, credits);
+  const ledger = _buildSpecialsLedger(playerCount, credits, packed);
 
-  // Claimer pays 4 claims to each other player (wrong DIK penalty)
+  // Claimer pays 4 claims to each non-packed other player (wrong DIK penalty)
+  // Packed players keep their packing claim — they receive nothing and pay nothing
   for (let p = 0; p < playerCount; p++) {
-    if (p === claimer) continue;
+    if (p === claimer || (packed && packed[p])) continue;
     ledger[claimer][p] += 4;
   }
 
