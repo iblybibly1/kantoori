@@ -97,11 +97,10 @@ class Game {
     // Set to true after a valid DIK where no Joker wildcard was used in the winning hand
     this.noWildcardBonus = false;
 
-    // Populated only after a Win 2 DIK; holds the 4 discarded cards for scoring
-    this.win2DiscardedCards = [];
-
-    // Discard-exception tracking (legacy, kept for compatibility)
-    this.specialCardOwner = new Map(); // card.id → playerIndex
+    // Per-player list of special cards (Silver/Poker/Ace♠) discarded at any point
+    // during the round — their per-card claim values are counted in scoring even
+    // though the cards are no longer in the player's hand.
+    this.discardedSpecials = Array.from({ length: this.playerCount }, () => []);
   }
 
   // ── Read-only accessors ─────────────────────────────────────────────────────
@@ -276,9 +275,6 @@ class Game {
 
     if (!partition) return this._triggerInvalidWin();
 
-    // Store discarded cards so scoring can include their claims for the winner
-    this.win2DiscardedCards = discarded;
-
     // No-wildcard bonus: true only if no Joker used in the 3 Thankas groups
     this.noWildcardBonus = !partition.flat().some(c => c.isPoker(this.jokerCard));
 
@@ -367,8 +363,12 @@ class Game {
 
   _trackSpecialDiscard(card) {
     const type = card.cardType(this.jokerCard);
-    if (type === 'joker' || type === 'silver') {
-      this.specialCardOwner.set(card.id, this.currentPlayer);
+    // Track Silver (type=joker), Poker (type=silver), and Ace♠ so their
+    // per-card claim values are still counted at round end even if discarded.
+    const isAceSpades = card.rank === 'A' && card.suit === 'Spades' &&
+                        type !== 'joker' && type !== 'silver' && type !== 'poker';
+    if (type === 'joker' || type === 'silver' || isAceSpades) {
+      this.discardedSpecials[this.currentPlayer].push(card);
     }
   }
 

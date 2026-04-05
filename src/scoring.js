@@ -62,7 +62,10 @@ function isDoubleGame(jokerCard) {
 // pokerFromDiscard[p] = how many Poker cards player p drew from the discard pile
 // winnerIndex = seat index of winner, or null for no winner
 
-function calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winnerIndex, packed) {
+// discardedSpecials[p] = special cards (Silver/Poker/Ace♠) that player p discarded
+// during the round — their per-card claim values are still counted even though the
+// cards are no longer in the player's hand at round end.
+function calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winnerIndex, packed, discardedSpecials) {
   const n    = hands.length;
   const mult = isDoubleGame(jokerCard) ? 2 : 1;
   const credits = new Array(n).fill(0);
@@ -123,6 +126,16 @@ function calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winnerIndex, pac
     }
     if (normalGroups > 0) pts += 4 * normalGroups - 1;
 
+    // ── Discarded special cards (per-card values, no Thankas bonus) ───────────
+    // Silver/Poker/Ace♠ cards discarded during play still earn their base claim.
+    if (discardedSpecials && discardedSpecials[p]) {
+      for (const c of discardedSpecials[p]) {
+        if (c.isJoker(jokerCard) && c !== jokerCard) pts += 2;   // Silver: 2 each
+        else if (c.isSilver(jokerCard))              pts += 1;   // Poker: 1 each
+        else if (c.rank === 'A' && c.suit === 'Spades') pts += 1; // Ace♠: 1 each
+      }
+    }
+
     credits[p] = pts * mult;
   }
 
@@ -147,24 +160,9 @@ function _buildSpecialsLedger(playerCount, credits, packed) {
 // ── Normal round result ────────────────────────────────────────────────────────
 
 function calcRoundResult(game) {
-  const { winner, hands, jokerCard, playerCount, packed, pokerFromDiscard, noWildcardBonus, win2DiscardedCards } = game;
+  const { winner, hands, jokerCard, playerCount, packed, pokerFromDiscard, noWildcardBonus, discardedSpecials } = game;
 
-  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winner, packed);
-
-  // Win 2 discarded cards: their claim values still count for the winner.
-  // We treat them as a fake single-card "hand" and add the raw points.
-  if (winner !== null && win2DiscardedCards && win2DiscardedCards.length > 0) {
-    const mult = isDoubleGame(jokerCard) ? 2 : 1;
-    let discPts = 0;
-    for (const c of win2DiscardedCards) {
-      if (c.isJoker(jokerCard) && c !== jokerCard) discPts += 2;   // Silver
-      else if (c.isSilver(jokerCard)) discPts += 1;                // Poker
-      else if (c.isPoker(jokerCard)) discPts += 1;                 // Joker wildcard (winner)
-      else if (c.rank === 'A' && c.suit === 'Spades' &&
-               !c.isJoker(jokerCard) && !c.isSilver(jokerCard) && !c.isPoker(jokerCard)) discPts += 1; // Ace♠
-    }
-    credits[winner] += discPts * mult;
-  }
+  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, winner, packed, discardedSpecials);
 
   // No-wildcard bonus: winner used no Joker wildcards → +2 extra claims (×2 if double game)
   if (noWildcardBonus && winner !== null) {
@@ -197,10 +195,10 @@ function calcRoundResult(game) {
 // Mutual special credits apply.  Forfeiter additionally pays meld penalty to all.
 
 function calcForfeitResult(game) {
-  const { forfeiter, hands, jokerCard, playerCount, pokerFromDiscard, packed } = game;
+  const { forfeiter, hands, jokerCard, playerCount, pokerFromDiscard, packed, discardedSpecials } = game;
 
   // No winner in a forfeit
-  const credits       = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null, packed);
+  const credits       = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null, packed, discardedSpecials);
   const forfeiterProg = assessMeldProgress(hands[forfeiter], jokerCard);
   const penalty       = MELD_PENALTY[forfeiterProg];
 
@@ -220,10 +218,10 @@ function calcForfeitResult(game) {
 // Mutual special credits apply.  Claimer additionally pays every other player 4 claims.
 
 function calcInvalidWinResult(game) {
-  const { invalidWinClaimer: claimer, hands, jokerCard, playerCount, pokerFromDiscard, packed } = game;
+  const { invalidWinClaimer: claimer, hands, jokerCard, playerCount, pokerFromDiscard, packed, discardedSpecials } = game;
 
   // No winner in a wrong DIK
-  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null, packed);
+  const credits = calcSpecialCredits(hands, jokerCard, pokerFromDiscard, null, packed, discardedSpecials);
 
   const ledger = _buildSpecialsLedger(playerCount, credits, packed);
 

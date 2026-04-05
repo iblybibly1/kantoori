@@ -407,7 +407,13 @@ function handleRoundEnd(room) {
 
   const info = roomInfo(room);
   scoring.isDoubleGame = isDoubleGame(game.jokerCard);
-  io.to(room.code).emit('round-ended', { roomInfo: info, scoring, outcome });
+  io.to(room.code).emit('round-ended', {
+    roomInfo: info,
+    scoring,
+    outcome,
+    hands:     game.hands,      // all players' final hands (revealed to everyone)
+    jokerCard: game.jokerCard,  // for card type display in result screen
+  });
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
