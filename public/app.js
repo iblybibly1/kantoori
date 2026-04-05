@@ -190,11 +190,6 @@ function initSocket() {
               state.lastDrawnCardId = null;
               render();
             }, 3000);
-            // Sync updated hand order (existing order + new card appended)
-            var syncOrder = state.handOrder ? state.handOrder.slice()
-              : newHand.map(function(c){ return c.id; });
-            if (syncOrder.indexOf(newHand[ni2].id) === -1) syncOrder.push(newHand[ni2].id);
-            socket.emit('sync-hand-order', { order: syncOrder });
             break;
           }
         }
@@ -774,6 +769,7 @@ function renderGame() {
   var idToIdx = {};
   for (var ii = 0; ii < myHand.length; ii++) idToIdx[myHand[ii].id] = ii;
 
+  var _prevOrderJson = state.handOrder ? JSON.stringify(state.handOrder) : null;
   if (!state.handOrder) {
     state.handOrder = myHand.map(function(c) { return c.id; });
   } else {
@@ -787,6 +783,11 @@ function renderGame() {
       if (newOrder.indexOf(myHand[ni].id) === -1) newOrder.push(myHand[ni].id);
     }
     state.handOrder = newOrder;
+  }
+  // Sync hand order to server whenever it initialises or changes (covers initial
+  // deal, new card drawn, and card discarded — drag-end syncs separately)
+  if (socket && JSON.stringify(state.handOrder) !== _prevOrderJson) {
+    socket.emit('sync-hand-order', { order: state.handOrder });
   }
 
   var handContainer = h('div',{class:'hand-cards'});
