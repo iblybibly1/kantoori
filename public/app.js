@@ -771,7 +771,15 @@ function renderGame() {
 
   var _prevOrderJson = state.handOrder ? JSON.stringify(state.handOrder) : null;
   if (!state.handOrder) {
-    state.handOrder = myHand.map(function(c) { return c.id; });
+    // Sort initial hand: suit descending (Spades > Hearts > Diamonds > Clubs),
+    // then rank descending (K > Q > J > 10 > … > 2 > A) within each suit.
+    var _suitRank = { Spades: 4, Hearts: 3, Diamonds: 2, Clubs: 1 };
+    var _rankOrder = { A:1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,J:11,Q:12,K:13 };
+    var _sorted = myHand.slice().sort(function(a, b) {
+      var sd = (_suitRank[b.suit] || 0) - (_suitRank[a.suit] || 0);
+      return sd !== 0 ? sd : (_rankOrder[b.rank] || 0) - (_rankOrder[a.rank] || 0);
+    });
+    state.handOrder = _sorted.map(function(c) { return c.id; });
   } else {
     // Keep IDs still in hand (preserves custom visual order across turns)
     var newOrder = [];
