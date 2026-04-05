@@ -502,16 +502,16 @@ function showRulebook() {
            'You owe <b>1 claim</b> to whoever wins that round. You pay nothing else and earn nothing else — special cards in your hand do not count. ' +
            'The last remaining active player cannot pack.' },
 
-    { title:'😬 Missed Thank-You (Forfeit)',
+    { title:'😬 Missed Thank-You',
       body:'If you drew a card from the discard pile that completed a Thankas but forgot to press Thank You before your next turn, ' +
-           'you are <b>forfeited</b>. If you then try to declare DIK!, it triggers a forfeit instead of a win: ' +
-           'you pay your <b>meld penalty</b> to every other active player.' },
+           'you are marked. You can still declare DIK! normally — a win is a win, an invalid DIK is an invalid DIK. ' +
+           'There is no separate forfeit penalty.' },
 
     { title:'📊 Meld Penalty (for losers)',
       body:'When someone wins, each losing player pays the winner a <b>meld penalty</b> based on how close they were to winning:\n\n' +
            '• No run of 4 at all → <b>4 claims</b>\n' +
-           '• Has a run of 4, no sets of 3 → <b>6 claims</b>\n' +
-           '• Run of 4 + 1 set → <b>3 claims</b>\n' +
+           '• Has a run of 4, no sets of 3 → <b>3 claims</b>\n' +
+           '• Run of 4 + 1 set → <b>2 claims</b>\n' +
            '• Run of 4 + 2 sets → <b>1 claim</b>\n' +
            '• Run of 4 + 3 sets (complete hand) → <b>0 claims</b>\n\n' +
            'Packed players only pay the 1-claim packing cost, not the meld penalty.' },
@@ -935,8 +935,7 @@ function buildActions(gs, isMyTurn, mySeat) {
 }
 
 function buildStatus(gs, isMyTurn, mySeat) {
-  if (gs.packed    && gs.packed[mySeat])    return 'You have packed this round.';
-  if (gs.forfeited && gs.forfeited[mySeat]) return 'You are forfeited — declaring will use forfeit scoring.';
+  if (gs.packed && gs.packed[mySeat]) return 'You have packed this round.';
   if (!isMyTurn) return '';
   if (gs.phase==='draw') {
     if (gs.isFirstTurn && !gs.hasActed[mySeat]) return 'First turn: draw a card or Pack to sit out.';
@@ -961,8 +960,8 @@ function renderResult() {
 
   var outcome = data ? data.outcome : 'win';
   var scoring = data ? data.scoring : null;
-  var bannerCls = 'outcome-banner ' + (outcome==='win'?'ow':outcome==='forfeit'?'of':'oi');
-  var bannerTxt = outcome==='win'?'🏆 Win!':outcome==='forfeit'?'⚠️ Forfeit!':'❌ Invalid DIK!';
+  var bannerCls = 'outcome-banner ' + (outcome==='win'?'ow':'oi');
+  var bannerTxt = outcome==='win'?'🏆 Win!':'❌ Invalid DIK!';
   var children = [h('div',{class:bannerCls},bannerTxt)];
 
   // Double-game banner
@@ -1126,7 +1125,7 @@ function renderSessionEnd() {
     return h('tr',{},[
       h('td',{},[h('div',{class:'pcell'},[h('div',{class:'pdot',style:'background:'+colorHex(p.color)}),h('span',{},p.nickname)])]),
       h('td',{},String(s.wins||0)), h('td',{},String(s.thankYous||0)),
-      h('td',{},String(s.packs||0)), h('td',{},String(s.forfeits||0)),
+      h('td',{},String(s.packs||0)),
       h('td',{},String(s.invalidWins||0)), h('td',{},String(s.rounds||0)),
       h('td',{style:'color:var(--gold);font-weight:700'},'◉ '+p.chips),
     ]);
@@ -1134,7 +1133,7 @@ function renderSessionEnd() {
   var table = h('table',{class:'stats-table'},[
     h('thead',{},[h('tr',{},[
       h('th',{},'Player'),h('th',{},'Wins'),h('th',{},'TY'),h('th',{},'Packs'),
-      h('th',{},'Forfeits'),h('th',{},'Invalid'),h('th',{},'Rounds'),h('th',{},'Chips'),
+      h('th',{},'Invalid'),h('th',{},'Rounds'),h('th',{},'Chips'),
     ])]),
     h('tbody',{},rows),
   ]);

@@ -7,7 +7,6 @@ import { dirname, join } from 'path';
 import { Game, Phase } from './src/game.js';
 import {
   calcRoundResult,
-  calcForfeitResult,
   calcInvalidWinResult,
   isDoubleGame,
 } from './src/scoring.js';
@@ -383,11 +382,7 @@ function handleRoundEnd(room) {
   const game = room.game;
   let scoring, outcome;
 
-  if (game.forfeiter !== null) {
-    outcome = 'forfeit';
-    scoring = calcForfeitResult(game);
-    room.players[game.forfeiter].stats.forfeits++;
-  } else if (game.invalidWinClaimer !== null) {
+  if (game.invalidWinClaimer !== null) {
     outcome = 'invalid';
     scoring = calcInvalidWinResult(game);
     room.players[game.invalidWinClaimer].stats.invalidWins++;

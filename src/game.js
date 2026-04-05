@@ -225,7 +225,6 @@ class Game {
 
   _declareWin1(cardIndex) {
     this._requirePhase(Phase.DISCARD);
-    if (this._isForfeitingPlayer()) return this._triggerForfeitWin();
 
     const hand = this.hands[this.currentPlayer];
     if (cardIndex < 0 || cardIndex >= hand.length) throw new Error('Invalid card index');
@@ -249,7 +248,6 @@ class Game {
 
   _declareWin2(indices) {
     this._requirePhase(Phase.DISCARD);
-    if (this._isForfeitingPlayer()) return this._triggerForfeitWin();
     if (indices.length !== 4) throw new Error('Win 2 requires exactly 4 cards to discard');
 
     const unique = new Set(indices);

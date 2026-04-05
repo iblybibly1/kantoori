@@ -50,7 +50,7 @@
 
 import { assessMeldProgress } from './melds.js';
 
-const MELD_PENALTY = Object.freeze({ 0: 4, 1: 6, 2: 3, 3: 1, 4: 0 });
+const MELD_PENALTY = Object.freeze({ 0: 4, 1: 3, 2: 2, 3: 1, 4: 0 });
 const MELD_VALUE   = Object.freeze({ 0:  0, 1: 4, 2: 7, 3: 10, 4: 13 });
 
 // ── Double-game check ──────────────────────────────────────────────────────────
