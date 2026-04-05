@@ -318,6 +318,15 @@ io.on('connection', (socket) => {
     rooms.delete(room.code);
   });
 
+  // ── sync-hand-order ──────────────────────────────────────────────────────────
+  socket.on('sync-hand-order', ({ order }) => {
+    if (!Array.isArray(order)) return;
+    const room = getPlayerRoom(socket);
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (player) player.handOrder = order;
+  });
+
   // ── announce-thankas ──────────────────────────────────────────────────────────
   socket.on('announce-thankas', () => {
     const room = getPlayerRoom(socket);
@@ -407,12 +416,16 @@ function handleRoundEnd(room) {
 
   const info = roomInfo(room);
   scoring.isDoubleGame = isDoubleGame(game.jokerCard);
+  // Collect each player's last-known hand arrangement (synced client-side)
+  const handOrders = room.players.map(p => p.handOrder || null);
+
   io.to(room.code).emit('round-ended', {
     roomInfo: info,
     scoring,
     outcome,
-    hands:     game.hands,      // all players' final hands (revealed to everyone)
-    jokerCard: game.jokerCard,  // for card type display in result screen
+    hands:      game.hands,      // all players' final hands (revealed to everyone)
+    jokerCard:  game.jokerCard,  // for card type display in result screen
+    handOrders,                  // each player's personal card arrangement
   });
 }
 

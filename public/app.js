@@ -105,6 +105,7 @@ function onDragEnd() {
     var moved = order.splice(from, 1)[0];
     order.splice(to, 0, moved);
     state.handOrder = order;
+    socket.emit('sync-hand-order', { order: state.handOrder });
     render();
   }
 }
@@ -189,6 +190,11 @@ function initSocket() {
               state.lastDrawnCardId = null;
               render();
             }, 3000);
+            // Sync updated hand order (existing order + new card appended)
+            var syncOrder = state.handOrder ? state.handOrder.slice()
+              : newHand.map(function(c){ return c.id; });
+            if (syncOrder.indexOf(newHand[ni2].id) === -1) syncOrder.push(newHand[ni2].id);
+            socket.emit('sync-hand-order', { order: syncOrder });
             break;
           }
         }
@@ -974,7 +980,19 @@ function renderResult() {
   if (data && data.hands && data.jokerCard) {
     var jcFH = data.jokerCard;
     var fhRows2 = room.players.map(function(p) {
-      var hand2 = data.hands[p.seatIndex] || [];
+      var rawHand = data.hands[p.seatIndex] || [];
+      // Reorder to match the player's personal arrangement if available
+      var hOrder = data.handOrders && data.handOrders[p.seatIndex];
+      var hand2;
+      if (hOrder && hOrder.length) {
+        var idMapFH = {};
+        rawHand.forEach(function(c){ if(c) idMapFH[c.id] = c; });
+        hand2 = [];
+        hOrder.forEach(function(id){ if(idMapFH[id]) hand2.push(idMapFH[id]); });
+        rawHand.forEach(function(c){ if(c && hand2.indexOf(c) === -1) hand2.push(c); });
+      } else {
+        hand2 = rawHand;
+      }
       var isWinnerFH = data.scoring && p.seatIndex === data.scoring.winner;
       var isPackedFH = data.scoring && data.scoring.meldProgress &&
                        data.scoring.meldProgress[p.seatIndex] === null && !isWinnerFH;
