@@ -970,6 +970,36 @@ function renderResult() {
       '⚠ Double Game — all claims ×2'));
   }
 
+  // ── Final hands reveal — shown immediately so everyone sees cards without scrolling
+  if (data && data.hands && data.jokerCard) {
+    var jcFH = data.jokerCard;
+    var fhRows2 = room.players.map(function(p) {
+      var hand2 = data.hands[p.seatIndex] || [];
+      var isWinnerFH = data.scoring && p.seatIndex === data.scoring.winner;
+      var isPackedFH = data.scoring && data.scoring.meldProgress &&
+                       data.scoring.meldProgress[p.seatIndex] === null && !isWinnerFH;
+      var badges2 = [];
+      if (isWinnerFH) badges2.push(h('span',{class:'fh-winner-badge'},'WIN'));
+      if (isPackedFH) badges2.push(h('span',{class:'fh-packed-badge'},'PACKED'));
+      var cardNodes2 = hand2.map(function(c){
+        return c ? renderCard(c, {jokerCard:jcFH}) : null;
+      }).filter(Boolean);
+      return h('div',{class:'fh-row'},[
+        h('div',{class:'fh-name'},[
+          h('div',{class:'pdot',style:'background:'+colorHex(p.color)}),
+          h('span',{style:'font-weight:700'},p.nickname),
+        ].concat(badges2)),
+        h('div',{class:'fh-cards'},cardNodes2.length
+          ? cardNodes2
+          : [h('span',{style:'color:var(--dim);font-size:12px'},'(empty)')]),
+      ]);
+    });
+    children.push(h('div',{class:'res-panel'},[
+      h('div',{class:'sec-title'},'Final Hands'),
+      h('div',{class:'final-hands'},fhRows2),
+    ]));
+  }
+
   if (scoring && scoring.netPayments && scoring.netPayments.length) {
     var txRows = scoring.netPayments.map(function(pay){
       var fp = room.players.find(function(p){return p.seatIndex===pay.from;});
@@ -998,34 +1028,6 @@ function renderResult() {
     if (claimRows.length) {
       children.push(h('div',{class:'res-panel'},[h('div',{class:'sec-title'},'Special Claims')].concat(claimRows)));
     }
-  }
-
-  // Final hands reveal
-  if (data && data.hands && data.jokerCard) {
-    var jc = data.jokerCard;
-    var fhRows = room.players.map(function(p) {
-      var hand = data.hands[p.seatIndex] || [];
-      var isPacked  = data.scoring && data.scoring.meldProgress && data.scoring.meldProgress[p.seatIndex] === null && p.seatIndex !== (data.scoring.winner !== undefined ? data.scoring.winner : -1);
-      var isWinner2 = data.scoring && p.seatIndex === data.scoring.winner;
-      var badges = [];
-      if (isWinner2) badges.push(h('span',{class:'fh-winner-badge'},'WIN'));
-      if (data.scoring && data.scoring.meldProgress && data.scoring.meldProgress[p.seatIndex] === null && !isWinner2)
-        badges.push(h('span',{class:'fh-packed-badge'},'PACKED'));
-      var cardNodes = hand.map(function(c) {
-        return c ? renderCard(c, {jokerCard:jc}) : null;
-      }).filter(Boolean);
-      return h('div',{class:'fh-row'},[
-        h('div',{class:'fh-name'},[
-          h('div',{class:'pdot',style:'background:'+colorHex(p.color)}),
-          h('span',{style:'font-weight:700'},p.nickname),
-        ].concat(badges)),
-        h('div',{class:'fh-cards'},cardNodes.length ? cardNodes : [h('span',{style:'color:var(--dim);font-size:12px'},'(empty)')]),
-      ]);
-    });
-    children.push(h('div',{class:'res-panel'},[
-      h('div',{class:'sec-title'},'Final Hands'),
-      h('div',{class:'final-hands'},fhRows),
-    ]));
   }
 
   var sorted = room.players.slice().sort(function(a,b){return b.chips-a.chips;});
