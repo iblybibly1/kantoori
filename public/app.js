@@ -172,6 +172,29 @@ function initSocket() {
   socket = io();
 
   socket.on('room-update', function(data) {
+    // Detect newly drawn card BEFORE overwriting state — compare old vs new hand
+    if (data.myState && state.myState &&
+        data.myState.phase === 'discard' &&
+        data.myState.currentPlayer === data.mySeat) {
+      var oldHand = (state.myState.hands && state.myState.hands[data.mySeat]) || [];
+      var newHand = (data.myState.hands && data.myState.hands[data.mySeat]) || [];
+      if (newHand.length === oldHand.length + 1) {
+        var oldIds = {};
+        for (var oi2 = 0; oi2 < oldHand.length; oi2++) oldIds[oldHand[oi2].id] = true;
+        for (var ni2 = 0; ni2 < newHand.length; ni2++) {
+          if (!oldIds[newHand[ni2].id]) {
+            state.lastDrawnCardId = newHand[ni2].id;
+            clearTimeout(state._drawTimer);
+            state._drawTimer = setTimeout(function() {
+              state.lastDrawnCardId = null;
+              render();
+            }, 3000);
+            break;
+          }
+        }
+      }
+    }
+
     state.roomInfo = data.roomInfo;
     state.myState  = data.myState;
     state.mySeat   = data.mySeat;
@@ -745,8 +768,6 @@ function renderGame() {
   var idToIdx = {};
   for (var ii = 0; ii < myHand.length; ii++) idToIdx[myHand[ii].id] = ii;
 
-  var prevOrderSet = state.handOrder ? (function(arr){ var s={}; for(var k=0;k<arr.length;k++) s[arr[k]]=true; return s; })(state.handOrder) : null;
-
   if (!state.handOrder) {
     state.handOrder = myHand.map(function(c) { return c.id; });
   } else {
@@ -760,22 +781,6 @@ function renderGame() {
       if (newOrder.indexOf(myHand[ni].id) === -1) newOrder.push(myHand[ni].id);
     }
     state.handOrder = newOrder;
-  }
-
-  // Detect newly drawn card for highlight (green glow for 3 seconds)
-  if (prevOrderSet && isMyTurn) {
-    for (var di = 0; di < state.handOrder.length; di++) {
-      if (!prevOrderSet[state.handOrder[di]]) {
-        var drawnId = state.handOrder[di];
-        state.lastDrawnCardId = drawnId;
-        clearTimeout(state._drawTimer);
-        state._drawTimer = setTimeout(function() {
-          state.lastDrawnCardId = null;
-          render();
-        }, 3000);
-        break;
-      }
-    }
   }
 
   var handContainer = h('div',{class:'hand-cards'});
